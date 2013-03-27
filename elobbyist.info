@@ -1,0 +1,18 @@
+name = Email Lobbyist
+description = Mass lobby by email through subscribers' own email accounts
+core = 7.x
+package = Email Lobbyist
+php = 5.3
+
+; Contrib Dependencies
+dependencies[] = relation
+dependencies[] = admin_menu_toolbar
+dependencies[] = encrypt
+
+; Controller Classes
+files[] = includes/contact.controller.inc
+files[] = includes/contact_group.controller.inc
+files[] = includes/mailing.controller.inc
+files[] = includes/activity.controller.inc
+files[] = includes/template.controller.inc
+files[] = includes/email_provider.controller.inc

@@ -1,0 +1,472 @@
+<?php
+/**
+ * @file
+ * Installation file for the Email Lobbyist module
+ * 
+ * Add/Remove through Schema API the module entities
+*/
+
+/**
+ * Implements hook_schema().
+ */
+function elobbyist_schema() {
+  $schema = array();
+    
+  $schema['elobbyist_email_provider'] = elobbyist_email_provider_get_schema();
+
+  $schema['elobbyist_contact_group'] = elobbyist_contact_group_get_schema();
+  
+  $schema['elobbyist_contact'] = elobbyist_contact_get_schema();
+  
+  $schema['elobbyist_template'] = elobbyist_template_get_schema();
+
+  $schema['elobbyist_mailing'] = elobbyist_mailing_get_schema();
+  
+  $schema['elobbyist_activity'] = elobbyist_activity_get_schema();
+  
+  return $schema;
+}
+
+/**
+ * Implements hook_enable()
+ */
+function elobbyist_enable() {
+  //create relation types in use
+  $relation_types_info = array(
+    array(
+      'relation_type' => 'elobbyist_subscriber',
+      'label' => st('Subscriber Member of'),
+      'reverse_label' => st('Subscriber Member'),
+      'directional' => TRUE,
+      'transitive' => TRUE,
+      'r_unique' => TRUE,
+      'source_bundles' => array('elobbyist_contact:subscriber', 
+        'elobbyist_contact_group:subscribers'),
+      'target_bundles' => array('elobbyist_contact_group:subscribers'),
+    ),
+    array(
+      'relation_type' => 'elobbyist_recipient',
+      'label' => st('Recipient Member of'),
+      'reverse_label' => st('Recipient Member'),
+      'directional' => TRUE,
+      'transitive' => TRUE,
+      'r_unique' => TRUE,
+      'source_bundles' => array('elobbyist_contact:recipient', 
+        'elobbyist_contact_group:recipients'),
+      'target_bundles' => array('elobbyist_contact_group:recipients'),
+    ),
+    array(
+      'relation_type' => 'elobbyist_from',
+      'label' => st('Sender'),
+      'reverse_label' => st('From'),
+      'directional' => TRUE,
+      'transitive' => TRUE,
+      'r_unique' => TRUE,
+      'source_bundles' => array('elobbyist_contact:subscriber', 
+        'elobbyist_contact_group:subscribers'),
+      'target_bundles' => array('elobbyist_mailing:*'),
+    ),
+    array(
+      'relation_type' => 'elobbyist_to',
+      'label' => st('Recipient'),
+      'reverse_label' => st('To'),
+      'directional' => TRUE,
+      'transitive' => TRUE,
+      'r_unique' => TRUE,
+      'source_bundles' => array('elobbyist_contact:recipient', 
+        'elobbyist_contact_group:recipients'),
+      'target_bundles' => array('elobbyist_mailing:*'),
+    ),
+  );
+  
+  foreach ($relation_types_info as $info) {
+    $relation_type = relation_type_create($info);
+    relation_type_save($relation_type);
+  }
+}
+
+/**
+ * Implements hook_disable()
+ */
+function elobbyist_disable() {
+  // delete all the relationship_types and relations 
+  // mostly copied from crm_core_relationship module
+  $query = db_select('relation_bundles', 'rb')->
+           fields('rb', array('relation_type'))->
+           condition('rb.entity_type', 
+             array('elobbyist_contact', 
+                   'elobbyist_contact_group',
+                   'elobbyist_mailing', 
+                   'elobbyist_activity'), 'IN')->
+           distinct()->
+           execute();
+
+   while ($record = $query->fetchAssoc()) {
+     $relationship_type[] = $record['relation_type'];
+   }
+
+   foreach ($relationship_type as $type) {
+     // look into the database for each type
+     $relationship_query = db_select('relation', 'r')->
+           fields('r', array('rid'))->
+           condition('r.relation_type', $type)->
+           execute();
+
+     while ($result = $relationship_query->fetchAssoc()) {
+       // delete all the relationships of that type
+       relation_delete($result['rid']);
+     }
+     // finally delete the relationshp_type
+     relation_type_delete($type);
+   }
+}
+
+function elobbyist_email_provider_get_schema() {
+  return array(
+    'description' => 'Email Lobbyist email provider',
+    'fields' => array(
+      'providerid' => array(
+        'description' => 'The email provider identifier id.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'name' => array(
+        'description' => 'The provider name.',
+        'type' => 'varchar',
+        'length' => '100',
+        'not null' => TRUE,
+      ),
+      'smtphost' => array(
+        'description' => 'The provider smtp server address.',
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => TRUE,
+      ),
+      'smtpport' => array(
+        'description' => 'The provider smtp server port',
+        'type' => 'varchar',
+        'length' => '5',
+        'not null' => FALSE,
+      ),
+    ),
+    'unique keys' => array(
+      'name' => array('name'),
+    ),
+    'primary key' => array('providerid'),
+  );
+}
+
+function elobbyist_contact_group_get_schema() {
+  return array(
+    'description' => 'Email Lobbyist contact group',
+    'fields' => array(
+      'grpid' => array(
+        'description' => 'The group id.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'name' => array(
+        'description' => 'The group name.',
+        'type' => 'varchar',
+        'length' => '100',
+        'not null' => TRUE,
+      ),
+      'type' => array(
+        'description' => 'The {contact_type} this group is confined to.',
+        'type' => 'varchar',
+        'length' => '32',
+        'not null' => TRUE,
+      ),
+    ),
+    'unique keys' => array(
+      'name' => array('name'),
+    ),
+    'primary key' => array('grpid'),
+  );
+}
+
+function elobbyist_contact_get_schema() {
+  return array(
+    'description' => 'Email Lobbyist contacts - subscribers and recipients',
+    'fields' => array(
+      'cid' => array(
+        'description' => 'The primary identifier for a contact.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'type' => array(
+        'description' => 'The {contact_type} of this contact.',
+        'type' => 'varchar',
+        'length' => '32',
+        'not null' => TRUE,
+      ),
+      'name' => array(
+        'description' => 'The contact full name.',
+        'type' => 'varchar',
+        'length' => '200',
+        'not null' => TRUE,
+      ),
+      'form' => array(
+        'description' => 'for subscriber - creating form',
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'not null' => FALSE,
+      ),
+      'stype' => array(
+        'description' => 'for subscriber - subscription type: persistent or one-time subscriber?',
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'not null' => FALSE,
+      ),
+      'email' => array(
+        'description' => 'The contact email address.',
+        'type' => 'varchar',
+        'length' => '254',
+        'not null' => TRUE,
+      ),
+      'pass' => array(
+        'description' => 'A subscriber email account password',
+        'type' => 'varchar',
+        'length' => '2048',
+        'not null' => FALSE,
+      ),
+      'providerid' => array(
+        'description' => 'The email provider identifier.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => FALSE,
+      ),
+      'notify' => array(
+        'description' => 'Notify on emails sent.',
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'not null' => FALSE,
+      ),
+      'created' => array(
+        'description' => 'The Unix timestamp when the contact was created.',
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+      'changed' => array(
+        'description' => 'The Unix timestamp when the contact was most recently saved.',
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+    ),
+    'foreign keys' => array(
+      'email_provider' => array(
+        'table' => 'elobbyist_email_provider',
+        'columns' => array('providerid' => 'providerid'),
+      ),
+    ),
+    'unique keys' => array(
+      'email' => array('email'),
+    ),
+    'primary key' => array('cid'),
+    'indexes' => array(
+      'providerid' => array('providerid'),
+      'type' => array('type'),
+      'name' => array('name'),
+      'created' => array('created'),
+    ),
+  );
+}
+
+function elobbyist_template_get_schema() {
+  return array(
+    'description' => 'Email Lobbyist template',
+    'fields' => array(
+      'tid' => array(
+        'description' => 'The primary identifier for a template.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'name' => array(
+        'description' => 'The template name.',
+        'type' => 'varchar',
+        'length' => '100',
+        'not null' => TRUE,
+      ),
+      'subject' => array(
+        'description' => 'The email subject.',
+        'type' => 'varchar',
+        'length' => '500',
+        'not null' => TRUE,
+      ),
+      'body' => array(
+        'description' => 'The email body.',
+        'type' => 'text',
+        'not null' => TRUE,
+      ),
+      'status' => array(
+        'description' => 'template status: Draft, Sent, Closed, Cancelled.',
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+    ),
+    'unique keys' => array(
+      'name' => array('name'),
+    ),
+    'primary key' => array('tid'),
+  );
+}
+
+function elobbyist_mailing_get_schema() {
+ return array(
+    'description' => 'Email Lobbyist mailing',
+    'fields' => array(
+      'mid' => array(
+        'description' => 'The primary identifier for a mailing.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'name' => array(
+        'description' => 'The mailing name.',
+        'type' => 'varchar',
+        'length' => '100',
+        'not null' => TRUE,
+      ),
+      'tid' => array(
+        'description' => 'The mailing template.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'schedule' => array(
+        'description' => 'schedule type.',
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'status' => array(
+        'description' => 'mailing status: Draft, Scheduled, Cancelled, Closed.',
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'start' => array(
+        'description' => 'The Unix timestamp for scheduling start time.',
+        'type' => 'int',
+        'not null' => FALSE,
+      ),
+      'end' => array(
+        'description' => 'The Unix timestamp for scheduling end time.',
+        'type' => 'int',
+        'not null' => FALSE,
+      ),
+      'time_part1' => array(
+        'description' => 'Every x time part. A time part (days, hours or minutes) for scheduling.',
+        'type' => 'int',
+        'not null' => FALSE,
+      ),
+      'time_part2' => array(
+        'description' => 'Every x time part. A time part (days, hours or minutes) for scheduling.',
+        'type' => 'int',
+        'not null' => FALSE,
+      ),
+      'created' => array(
+        'description' => 'The Unix timestamp when the record was created.',
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+      'changed' => array(
+        'description' => 'The Unix timestamp when the record was most recently saved.',
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+    ),
+    'unique keys' => array(
+      'name' => array('name'),
+    ),
+    'foreign keys' => array(
+      'template' => array(
+        'table' => 'elobbyist_template',
+        'columns' => array('tid' => 'tid'),
+      ),
+    ),
+    'indexes' => array(
+      'tid' => array('tid'),
+    ),
+    'primary key' => array('mid'),
+  ); 
+}
+
+function elobbyist_activity_get_schema() {
+  return array(
+    'description' => 'Email Lobbyist email activity',
+    'fields' => array(
+      'aid' => array(
+        'description' => 'The primary identifier for an email activity.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'mid' => array(
+        'description' => 'mailing id.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'tid' => array(
+        'description' => 'template id.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'from' => array(
+        'description' => 'Contact id.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'to' => array(
+        'description' => 'Contact id.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'created' => array(
+        'description' => 'The Unix timestamp when the record was created.',
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+    ),
+    'foreign keys' => array(
+      'mailing' => array(
+        'table' => 'elobbyist_mailing',
+        'columns' => array('mid' => 'mid'),
+      ),
+      'template' => array(
+        'table' => 'elobbyist_template',
+        'columns' => array('tid' => 'tid'),
+      ),
+      'contact_from' => array(
+        'table' => 'elobbyist_contact',
+        'columns' => array('from' => 'cid'),
+      ),
+      'contact_to' => array(
+        'table' => 'elobbyist_contact',
+        'columns' => array('to' => 'cid'),
+      ),
+    ),
+    'indexes' => array(
+      'mid' => array('mid'),
+      'tid' => array('tid'),
+      'from' => array('from'),
+      'to' => array('to'),
+    ),
+    'primary key' => array('aid'),
+  );
+}
