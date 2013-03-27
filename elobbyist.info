@@ -4,7 +4,7 @@ core = 7.x
 package = Email Lobbyist
 php = 5.3
 
-; Contrib Dependencies
+; Contrib dependencies
 dependencies[] = relation
 dependencies[] = admin_menu_toolbar
 dependencies[] = encrypt
