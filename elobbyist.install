@@ -14,7 +14,7 @@ function elobbyist_schema() {
     
   $schema['elobbyist_email_provider'] = elobbyist_email_provider_get_schema();
 
-  $schema['elobbyist_contact_group'] = elobbyist_contact_group_get_schema();
+  $schema['elobbyist_group'] = elobbyist_group_get_schema();
   
   $schema['elobbyist_contact'] = elobbyist_contact_get_schema();
   
@@ -41,8 +41,8 @@ function elobbyist_enable() {
       'transitive' => TRUE,
       'r_unique' => TRUE,
       'source_bundles' => array('elobbyist_contact:subscriber', 
-        'elobbyist_contact_group:subscribers'),
-      'target_bundles' => array('elobbyist_contact_group:subscribers'),
+        'elobbyist_group:subscribers'),
+      'target_bundles' => array('elobbyist_group:subscribers'),
     ),
     array(
       'relation_type' => 'elobbyist_recipient',
@@ -52,8 +52,8 @@ function elobbyist_enable() {
       'transitive' => TRUE,
       'r_unique' => TRUE,
       'source_bundles' => array('elobbyist_contact:recipient', 
-        'elobbyist_contact_group:recipients'),
-      'target_bundles' => array('elobbyist_contact_group:recipients'),
+        'elobbyist_group:recipients'),
+      'target_bundles' => array('elobbyist_group:recipients'),
     ),
     array(
       'relation_type' => 'elobbyist_from',
@@ -63,7 +63,7 @@ function elobbyist_enable() {
       'transitive' => TRUE,
       'r_unique' => TRUE,
       'source_bundles' => array('elobbyist_contact:subscriber', 
-        'elobbyist_contact_group:subscribers'),
+        'elobbyist_group:subscribers'),
       'target_bundles' => array('elobbyist_mailing:*'),
     ),
     array(
@@ -74,7 +74,7 @@ function elobbyist_enable() {
       'transitive' => TRUE,
       'r_unique' => TRUE,
       'source_bundles' => array('elobbyist_contact:recipient', 
-        'elobbyist_contact_group:recipients'),
+        'elobbyist_group:recipients'),
       'target_bundles' => array('elobbyist_mailing:*'),
     ),
   );
@@ -95,7 +95,7 @@ function elobbyist_disable() {
            fields('rb', array('relation_type'))->
            condition('rb.entity_type', 
              array('elobbyist_contact', 
-                   'elobbyist_contact_group',
+                   'elobbyist_group',
                    'elobbyist_mailing', 
                    'elobbyist_activity'), 'IN')->
            distinct()->
@@ -157,7 +157,7 @@ function elobbyist_email_provider_get_schema() {
   );
 }
 
-function elobbyist_contact_group_get_schema() {
+function elobbyist_group_get_schema() {
   return array(
     'description' => 'Email Lobbyist contact group',
     'fields' => array(

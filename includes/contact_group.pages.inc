@@ -8,13 +8,13 @@
 /*
  * forms callback
  */
-function elobbyist_contact_group_form($form, &$form_state, $entity) {
+function elobbyist_group_form($form, &$form_state, $entity) {
   // Set the id to identify this as a contact edit form.
-  $form['#id'] = 'elobbyist_contact_group-form';
+  $form['#id'] = 'elobbyist_group-form';
   
   // Save the contact for later, in case we need it.
-  $form['#elobbyist_contact_group'] = $entity;
-  $form_state['elobbyist_contact_group'] = $entity;
+  $form['#elobbyist_group'] = $entity;
+  $form_state['elobbyist_group'] = $entity;
   
   $new_record = empty($entity->grpid);
   
@@ -36,7 +36,7 @@ function elobbyist_contact_group_form($form, &$form_state, $entity) {
     '#type' => 'submit',
     '#value' => t('Save'),
     '#weight' => 100,
-    '#submit' => array('elobbyist_contact_group_form_submit'),
+    '#submit' => array('elobbyist_group_form_submit'),
   );
   
   if (!$new_record) {
@@ -45,13 +45,13 @@ function elobbyist_contact_group_form($form, &$form_state, $entity) {
       '#type' => 'submit',
       '#value' => t('Delete'),
       '#weight' => 120,
-      '#submit' => array('elobbyist_contact_group_form_delete_submit'),
+      '#submit' => array('elobbyist_group_form_delete_submit'),
     );
   }
   
-  $form['#validate'][] = 'elobbyist_contact_group_form_validate';
+  $form['#validate'][] = 'elobbyist_group_form_validate';
   
-  field_attach_form('elobbyist_contact_group', $entity, $form, $form_state);
+  field_attach_form('elobbyist_group', $entity, $form, $form_state);
   
   return $form;
 }
@@ -59,62 +59,87 @@ function elobbyist_contact_group_form($form, &$form_state, $entity) {
 /*
  * Add record page callback
  */
-function elobbyist_contact_group_add($type) {
-  $types = elobbyist_contact_group_types();
+function elobbyist_group_add($type) {
+  $types = elobbyist_group_types();
   $type  = (isset($type) ? str_replace('-', '_', $type) : NULL);
   if (empty($types[$type])) {
     return MENU_NOT_FOUND;
   }
   
-  $entity = entity_get_controller('elobbyist_contact_group')->create($type);
+  $entity = entity_get_controller('elobbyist_group')->create($type);
       
   drupal_set_title(t('New @name', array('@name' => $types[$type]->name)),
     PASS_THROUGH);
   
-  return drupal_get_form('elobbyist_contact_group_form', $entity);
+  return drupal_get_form('elobbyist_group_form', $entity);
 }
 
 /*
  * Edit record page callback
  */
-function elobbyist_contact_group_page_edit($entity) {
-  $types = elobbyist_contact_group_types();
+function elobbyist_group_page_edit($entity) {
+  elobbyist_group_page_title($entity);
+  
+  return drupal_get_form('elobbyist_group_form', $entity);
+}
+
+function elobbyist_group_page_view($entity, $view_mode = 'full') {
+  elobbyist_group_page_title($entity);
+  
+  // Remove previously built content, if exists.
+  $entity->content = array();
+  
+  $entity->content['#attached']['css'] = array(
+    drupal_get_path('module', 'elobbyist') . '/includes/elobbyist.css',
+  );
+  
+  // Build fields content.
+  field_attach_prepare_view('elobbyist_group', 
+    array($entity->grpid => $entity), $view_mode);
+  
+  entity_prepare_view('elobbyist_group', array($entity->grpid => $entity));
+  
+  $entity->content += field_attach_view('elobbyist_group', $entity, $view_mode);
+  
+  return $entity->content;
+}
+
+function elobbyist_group_page_title($entity) {
+  $types = elobbyist_group_types();
   drupal_set_title(t('@type: @title', array(
     '@type' => $types[$entity->type]->name,
     '@title' => $entity->name, )), PASS_THROUGH);
-  
-  return drupal_get_form('elobbyist_contact_group_form', $entity);
 }
 
 /*
  * Validate function
  */
-function elobbyist_contact_group_form_validate($form, &$form_state) {
-  $entity = $form_state['elobbyist_contact_group'];
+function elobbyist_group_form_validate($form, &$form_state) {
+  $entity = $form_state['elobbyist_group'];
     
   //Field validation
-  field_attach_form_validate('elobbyist_contact_group', $entity, $form, $form_state);
+  field_attach_form_validate('elobbyist_group', $entity, $form, $form_state);
 }
 
 /*
  * Save functions
  */
-function elobbyist_contact_group_form_submit($form, &$form_state) {
+function elobbyist_group_form_submit($form, &$form_state) {
   global $user;
   
-  $entity = $form_state['elobbyist_contact_group'];
+  $entity = $form_state['elobbyist_group'];
   
   $entity->name = $form_state['values']['name'];
         
   // Notify field widgets.
-  field_attach_submit('elobbyist_contact_group', $entity, $form, $form_state);
+  field_attach_submit('elobbyist_group', $entity, $form, $form_state);
   
   $new_record = empty($entity->grpid);
   
   // Save the contact.
-  $entity = elobbyist_contact_group_save($entity);
+  $entity = elobbyist_group_save($entity);
   
-  $types = elobbyist_contact_group_types();
+  $types = elobbyist_group_types();
   
   // Notify the user.
   if ($entity) {
@@ -126,15 +151,15 @@ function elobbyist_contact_group_form_submit($form, &$form_state) {
   }
 }
 
-function elobbyist_contact_group_save($entity) {
+function elobbyist_group_save($entity) {
   //invoke hook_elobbyist_contact_save_alter
   $cloned = clone $entity;
   $continue = TRUE;
     
-  drupal_alter('elobbyist_contact_group_save', $cloned, $continue);
+  drupal_alter('elobbyist_group_save', $cloned, $continue);
   
   if ($continue)
-    return entity_get_controller('elobbyist_contact_group')->save($entity);
+    return entity_get_controller('elobbyist_group')->save($entity);
   
   //allow to modify grpid for new records
   if (empty($entity->grpid))
@@ -147,19 +172,19 @@ function elobbyist_contact_group_save($entity) {
 /*
  * Delete functions
  */
-function elobbyist_contact_group_form_delete_submit($form, &$form_state) {
+function elobbyist_group_form_delete_submit($form, &$form_state) {
   $destination = array();
   if (isset($_GET['destination'])) {
     $destination = drupal_get_destination();
     unset($_GET['destination']);
   }
   
-  $entity = $form['#elobbyist_contact_group'];
+  $entity = $form['#elobbyist_group'];
   $form_state['redirect'] = array('elobbyist/contact-group/' . $entity->grpid . '/delete',
     array('query' => $destination));
 }
-function elobbyist_contact_group_delete_confirm($form, &$form_state, $entity) {
-  $form['#elobbyist_contact_group'] = $entity;
+function elobbyist_group_delete_confirm($form, &$form_state, $entity) {
+  $form['#elobbyist_group'] = $entity;
   
   $path = 'elobbyist/' . $entity->type . '/groups';
 
@@ -174,18 +199,18 @@ function elobbyist_contact_group_delete_confirm($form, &$form_state, $entity) {
     t('Cancel')
   );
 }
-function elobbyist_contact_group_delete_confirm_submit($form, &$form_state) {
+function elobbyist_group_delete_confirm_submit($form, &$form_state) {
   if ($form_state['values']['confirm']) {
-    $entity = elobbyist_contact_group_load($form_state['values']['grpid']);
+    $entity = elobbyist_group_load($form_state['values']['grpid']);
     
     $path = 'elobbyist/' . $entity->type . '/groups';
     
-    elobbyist_contact_group_delete($form_state['values']['grpid']);
+    elobbyist_group_delete($form_state['values']['grpid']);
     
-    watchdog('elobbyist_contact_group', '@type: deleted %title.' , array('@type' => 
+    watchdog('elobbyist_group', '@type: deleted %title.' , array('@type' => 
       $entity->type, '%title' => $entity->name) );
     
-    $types = elobbyist_contact_group_types();
+    $types = elobbyist_group_types();
     drupal_set_message(t('@type %title has been deleted.', array(
       '@type' => $types[$entity->type]->name,
       '%title' => $entity->name)
@@ -196,17 +221,17 @@ function elobbyist_contact_group_delete_confirm_submit($form, &$form_state) {
   }
 }
 
-function elobbyist_contact_group_delete($grpid) {
-  elobbyist_contact_group_delete_multiple(array($grpid));
+function elobbyist_group_delete($grpid) {
+  elobbyist_group_delete_multiple(array($grpid));
 }
 
-function elobbyist_contact_group_delete_multiple($ids) {
+function elobbyist_group_delete_multiple($ids) {
 
   //invoke hook_elobbyist_contact_delete
-  $continue = module_invoke_all('elobbyist_contact_group_delete', $ids);
+  $continue = module_invoke_all('elobbyist_group_delete', $ids);
   
   if ($continue !== FALSE)
-    return entity_get_controller('elobbyist_contact_group')->delete($ids);
+    return entity_get_controller('elobbyist_group')->delete($ids);
   
   return FALSE; //return false when delete was not made by entity_get_controller
 }
@@ -219,7 +244,7 @@ function elobbyist_contacts_groups_grid($type) {
   //Create a list of headers for sorting
 	$header = array( array('data' => t('Group Name'), 'field' => 'name', 'sort' => 'asc')	);
   
-  $types = elobbyist_contact_group_types();
+  $types = elobbyist_group_types();
   
   //change default "Groups" title provided by menu
   drupal_set_title($types[$type]->plural);
@@ -267,13 +292,13 @@ function elobbyist_contacts_groups_grid($type) {
 
 function elobbyist_contacts_groups_grid_data($type, &$header) {  
   //invoke hook_elobbyist_contact_grid to allow a different data source
-  $results = module_invoke_all('elobbyist_contact_group_rows', $header, array('type' => $type));
+  $results = module_invoke_all('elobbyist_group_rows', $header, array('type' => $type));
 
   if ($results)
     return $results;
   
   //Create the Sql query
-	$query = db_select('elobbyist_contact_group', 'cg');
+	$query = db_select('elobbyist_group', 'cg');
   
 	$query = $query->condition('type', $type)
 				->extend('PagerDefault') 	//Pager Extender

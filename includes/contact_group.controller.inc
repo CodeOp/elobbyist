@@ -23,27 +23,27 @@ class ELobbyistContactGroupController extends DrupalDefaultEntityController {
             
       // Give modules the opportunity to prepare field data for
       // saving.
-      field_attach_presave('elobbyist_contact_group', $entity);
+      field_attach_presave('elobbyist_group', $entity);
             
       // If this is a new record...
       if ($entity->is_new) {
         // Save the new record.
-        drupal_write_record('elobbyist_contact_group', $entity);
+        drupal_write_record('elobbyist_group', $entity);
                 
         $op = 'insert';
       }
       else {
         // Save the updated record
-        drupal_write_record('elobbyist_contact_group', $entity, 'grpid');
+        drupal_write_record('elobbyist_group', $entity, 'grpid');
         
         $op = 'update';
       }
             
       // Save fields.
       $function = 'field_attach_' . $op;
-      $function('elobbyist_contact_group', $entity);
+      $function('elobbyist_group', $entity);
       
-      module_invoke_all('entity_' . $op, $entity, 'elobbyist_contact_group');
+      module_invoke_all('entity_' . $op, $entity, 'elobbyist_group');
      
       //clear internal properties
       unset($entity->is_new);
@@ -56,7 +56,7 @@ class ELobbyistContactGroupController extends DrupalDefaultEntityController {
     }
     catch (Exception $e) {
       $transaction->rollback();
-      watchdog_exception('elobbyist_contact_group', $e, NULL, WATCHDOG_ERROR);
+      watchdog_exception('elobbyist_group', $e, NULL, WATCHDOG_ERROR);
       return FALSE;
     }
   }
@@ -71,21 +71,21 @@ class ELobbyistContactGroupController extends DrupalDefaultEntityController {
     
     try
     {
-      db_delete('elobbyist_contact_group')
+      db_delete('elobbyist_group')
         ->condition('grpid', $ids, 'IN')
         ->execute();
 
       foreach($entities as $entity) {        
-        field_attach_delete('elobbyist_contact_group', $entity);
+        field_attach_delete('elobbyist_group', $entity);
 
-        module_invoke_all('entity_delete', $entity, 'elobbyist_contact_group');
+        module_invoke_all('entity_delete', $entity, 'elobbyist_group');
       }
 
       db_ignore_slave();
     }
     catch(Exception $e) {
       $transaction->rollback();
-      watchdog_exception('elobbyist_contact_group', $e, NULL, WATCHDOG_ERROR);
+      watchdog_exception('elobbyist_group', $e, NULL, WATCHDOG_ERROR);
       return FALSE;
     }
     

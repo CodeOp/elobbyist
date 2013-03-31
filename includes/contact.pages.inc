@@ -119,20 +119,16 @@ function elobbyist_contact_form($form, &$form_state, $contact) {
 }
 
 function elobbyist_contact_page_view($entity, $view_mode = 'full') {
+  
+  elobbyist_contact_page_title($entity);
+  
   // Remove previously built content, if exists.
   $entity->content = array();
   
   $entity->content['#attached']['css'] = array(
     drupal_get_path('module', 'elobbyist') . '/includes/elobbyist.css',
   );
-  
-  if ($view_mode == 'teaser') {
-    $entity->content['name'] = array(
-      '#markup' => filter_xss($entity->name),
-      '#weight' => -5,
-    );
-  }
-    
+      
   $entity->content['email'] = array(
     '#markup' => 
       theme('elobbyist_field',
@@ -143,46 +139,46 @@ function elobbyist_contact_page_view($entity, $view_mode = 'full') {
      ),
     '#weight' => 0,
   );
-    
-  if (!empty($entity->providerid)) {
-    //since the list of providers is cached and not so long, 
-    //it's ok to pull it for getting the coresponding provider name of a specific record
-    $providers = elobbyist_get_email_providers();
-    
-    $entity->content['providerid'] = array(
-      '#markup' => theme('elobbyist_field',
-          array(
-            'title' => t('Provider'),
-            'item' => filter_xss($providers[$entity->providerid]),
-          )
-       ),
-      '#weight' => 5,
-    );
-  }
   
-  if ($entity->notify) {
+  if ($entity->type == 'subscriber') {
+    if (!empty($entity->providerid)) {
+      //since the list of providers is cached and not so long, 
+      //it's ok to pull it for getting the coresponding provider name of a specific record
+      $providers = elobbyist_get_email_providers();
+
+      $entity->content['providerid'] = array(
+        '#markup' => theme('elobbyist_field',
+            array(
+              'title' => t('Provider'),
+              'item' => filter_xss($providers[$entity->providerid]),
+            )
+         ),
+        '#weight' => 5,
+      );
+    }
+  
     $entity->content['notify'] = array(
       '#markup' => theme('elobbyist_field',
           array(
             'title' => t('Notify on each mail'),
-            'item' => t('Notify'),
+            'item' => $entity->notify ? t('Yes') : t('No'),
           )
        ),
       '#weight' => 20,
     );
-  }
-  
-  if (!empty($entity->form)) {
-    $form_types = elobbyist_form_types();
-    $entity->content['form'] = array(
-      '#markup' => theme('elobbyist_field',
-          array(
-            'title' => t('Created through'),
-            'item' => $form_types[$entity->form],
-          )
-       ),
-      '#weight' => 30,
-    );
+
+    if (!empty($entity->form)) {
+      $form_types = elobbyist_form_types();
+      $entity->content['form'] = array(
+        '#markup' => theme('elobbyist_field',
+            array(
+              'title' => t('Created through'),
+              'item' => $form_types[$entity->form],
+            )
+         ),
+        '#weight' => 30,
+      );
+    }
   }
   
   $entity->content['created'] = array(
@@ -192,7 +188,17 @@ function elobbyist_contact_page_view($entity, $view_mode = 'full') {
             'item' => format_date($entity->created),
           )
        ),
-      '#weight' => 50,
+      '#weight' => 46,
+  );
+  
+  $entity->content['changed'] = array(
+    '#markup' => theme('elobbyist_field',
+          array(
+            'title' => t('Modified on'),
+            'item' => format_date($entity->changed),
+          )
+       ),
+      '#weight' => 47,
   );
   
   // Build fields content.
@@ -236,12 +242,16 @@ function elobbyist_contact_add($type) {
  * Edit record page callback
  */
 function elobbyist_contact_page_edit($contact) {
+  elobbyist_contact_page_title($contact);
+  
+  return drupal_get_form('elobbyist_contact_form', $contact);
+}
+
+function elobbyist_contact_page_title($contact) {
   $types = elobbyist_contact_types();
   drupal_set_title(t('@type: @title', array(
     '@type' => $types[$contact->type]->name,
     '@title' => $contact->name, )), PASS_THROUGH);
-  
-  return drupal_get_form('elobbyist_contact_form', $contact);
 }
 
 /**
