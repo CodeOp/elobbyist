@@ -24,7 +24,6 @@ class ELobbyistContactController extends DrupalDefaultEntityController {
       'email' => '',
       'stype' => '',
       'providerid' => '',
-      'grpid' => '',
       'notify' => '',
       'form' => '',
     );
