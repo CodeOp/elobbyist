@@ -228,12 +228,13 @@ function elobbyist_group_delete($grpid) {
 function elobbyist_group_delete_multiple($ids) {
 
   //invoke hook_elobbyist_contact_delete
-  $continue = module_invoke_all('elobbyist_group_delete', $ids);
+  //example of how the module could be extended to use CRM modules
+  /*$continue = module_invoke_all('elobbyist_group_delete', $ids);
   
-  if ($continue !== FALSE)
+  if ($continue !== FALSE)*/
     return entity_get_controller('elobbyist_group')->delete($ids);
   
-  return FALSE; //return false when delete was not made by entity_get_controller
+  //return FALSE; //return false when delete was not made by entity_get_controller
 }
 
 /*
@@ -292,10 +293,11 @@ function elobbyist_contacts_groups_grid($type) {
 
 function elobbyist_contacts_groups_grid_data($type, &$header) {  
   //invoke hook_elobbyist_contact_grid to allow a different data source
-  $results = module_invoke_all('elobbyist_group_rows', $header, array('type' => $type));
+  //example of how the module could be extended to use CRM modules
+  /*$results = module_invoke_all('elobbyist_group_rows', $header, array('type' => $type));
 
   if ($results)
-    return $results;
+    return $results;*/
   
   //Create the Sql query
 	$query = db_select('elobbyist_group', 'cg');

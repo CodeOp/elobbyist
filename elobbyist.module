@@ -279,19 +279,34 @@ function elobbyist_menu() {
       );
   }
   
+  $items['elobbyist/contact'] = array(
+    'title' => 'Contact',
+    'weight' => 0,
+    'type' => MENU_LOCAL_TASK,
+    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+  );
+  
+  $items['elobbyist/contact/%elobbyist_contact/view'] = array(
+    'title' => 'View',
+    'page callback' => 'elobbyist_contact_page_view',
+    'page arguments' => array(2),
+    'access arguments' => array('view email lobbyist contacts'),
+    'weight' => -10,
+    'type' => MENU_LOCAL_TASK,
+    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+    'file' => 'includes/contact.pages.inc',
+  );
+  
   $items['elobbyist/contact/%elobbyist_contact/edit'] = array(
     'title' => 'Edit',
     'page callback' => 'elobbyist_contact_page_edit',
     'page arguments' => array(2),
     'access arguments' => array('edit email lobbyist contacts'),
     'weight' => 0,
-    'type' => MENU_CALLBACK,
-    'tab_parent' => 'elobbyist/contact/%elobbyist_contact',
-    'tab_root' => 'elobbyist/contact/%elobbyist_contact',
+    'type' => MENU_LOCAL_TASK,
+    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
     'file' => 'includes/contact.pages.inc',
-  );
-  
-  
+  ); 
 
   $items['elobbyist/contact/%elobbyist_contact/delete'] = array(
     'title' => 'Delete',
@@ -350,6 +365,23 @@ function elobbyist_menu() {
         'file' => 'includes/contact_group.pages.inc',
       );
   }
+  
+  $items['elobbyist/contact-group'] = array(
+    'title' => 'Contact Group',
+    'weight' => 0,
+    'type' => MENU_LOCAL_TASK,
+  );
+  
+  $items['elobbyist/contact-group/%elobbyist_group/view'] = array(
+    'title' => 'View',
+    'page callback' => 'elobbyist_group_page_view',
+    'page arguments' => array(2),
+    'access arguments' => array('view email lobbyist contact groups'),
+    'weight' => -10,
+    'type' => MENU_LOCAL_TASK,
+    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+    'file' => 'includes/contact_group.pages.inc',
+  );
     
   $items['elobbyist/contact-group/%elobbyist_group/edit'] = array(
     'title' => 'Edit',
@@ -357,9 +389,8 @@ function elobbyist_menu() {
     'page arguments' => array(2),
     'access arguments' => array('edit email lobbyist contact groups'),
     'weight' => 0,
-    'type' => MENU_CALLBACK,
-    'tab_parent' => 'elobbyist/contact-group/%elobbyist_group',
-    'tab_root' => 'elobbyist/contact-group/%elobbyist_group',
+    'type' => MENU_LOCAL_TASK,
+    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
     'file' => 'includes/contact_group.pages.inc',
   );
 
@@ -433,14 +464,12 @@ function elobbyist_contact_types() {
     'type' => 'subscriber',
     'name' => t('Subscriber'),
     'group' => 'subscribers',
-    'groupname' => t('Subscribers Group'),
     'description' => t('Allows to send lobbying emails in hir behalf'),
   );
   $types['recipient'] = (object)array(
     'type' => 'recipient',
     'name' => t('Recipient'),
     'group' => 'recipients',
-    'groupname' => t('Recipients Group'),
     'description' => t('A recipient of lobbying emails'),
   );
   
@@ -603,10 +632,11 @@ function elobbyist_contact_load_multiple($cids = array(), $conditions = array(),
   $reset = FALSE) {
   
   //invoke hook_elobbyist_contact_load to allow a different data source  
-  $entities = module_invoke_all('elobbyist_contact_load', $cids, $conditions);
+  //example of how the module could be extended to use CRM modules
+  /*$entities = module_invoke_all('elobbyist_contact_load', $cids, $conditions);
   
   if ($entities)
-    return $entities;
+    return $entities;*/
   
   return entity_load('elobbyist_contact', $cids, $conditions, $reset);
 }
@@ -621,10 +651,11 @@ function elobbyist_group_load_multiple($ids = array(), $conditions = array(),
   $reset = FALSE) {
   
   //invoke hook_elobbyist_contact_load to allow a different data source  
-  $entities = module_invoke_all('elobbyist_group_load', $ids, $conditions);
+  //example of how the module could be extended to use CRM modules
+  /*$entities = module_invoke_all('elobbyist_group_load', $ids, $conditions);
   
   if ($entities)
-    return $entities;
+    return $entities;*/
   
   return entity_load('elobbyist_group', $ids, $conditions, $reset);
 }
@@ -708,4 +739,178 @@ function theme_elobbyist_field($variables) {
   $output .= "</div>";
   
   return $output;
+}
+
+/*
+ * Implements hook_element_info
+ */
+function elobbyist_element_info() {
+ return array(
+   'elobbyist_contact_groups' => array(
+     '#input' => TRUE,
+     '#process' => array('elobbyist_contact_groups_element_process'),
+     '#theme_wrappers' => array('form_element'),
+   ),
+ );
+}
+
+function elobbyist_contact_groups_element_process($element, $form_state, $complete_form) {
+  if ($element['#type'] == 'elobbyist_contact_groups') {
+    
+    $contact = $form_state['elobbyist_contact'];
+    //do not show element on new form: can't save relations
+    if (empty($contact->cid))
+      return array();
+    
+    //get contact type
+    $types = elobbyist_contact_types();
+    
+    $grp_type = $types[$contact->type]->group;
+    
+    //get relevant contact groups as associative array of key-value
+    $groups = elobbyist_get_groups($grp_type);
+    //get selected contact groups through relation api 
+    
+    $relations = elobbyist_relations_get_data('elobbyist_contact', $contact->cid);
+    
+    $defaults = array();
+    
+    foreach($relations as $relation) {
+      foreach($relation->endpoints as $endpoints) {
+        foreach($endpoints as $endpoint) {
+          //add each group endpoint
+          if ($endpoint['entity_type'] == 'elobbyist_group') {
+            $defaults[] = $endpoint['entity_id'];
+          }
+        }
+      }
+    }
+
+    if (count($groups) > 0) {
+      $element['elobbyist_contact_groups_select'] = array(
+        '#type' => 'checkboxes',
+        '#options' => $groups,
+        '#default_value' => $defaults,
+      );
+    }
+    else
+    {
+      $element['elobbyist_contact_groups_lbl'] = array(
+        '#markup' => '<div>' . t('@type groups were not created yet.',
+          array('@type' => $types[$contact->type]->name)) . '</div>',
+      );
+    }
+  }  
+  return $element;
+}
+
+function elobbyist_field_attach_submit($entity_type, $entity, $form, &$form_state) {
+  if ($entity_type == 'elobbyist_contact') {
+    if (isset($form_state['field']) 
+      && key($form_state['field']) == 'elobbyist_contact_groups'
+      && isset($form_state['input']['op'])) {
+      
+      $contact = $form_state['elobbyist_contact'];
+      
+      //exit if somehow still new record or no relation_type element
+      if (empty($contact->cid) || !isset($form['elobbyist_contact_groups']['#relation_type'])) {
+        return;
+      }
+            
+      if ($form_state['input']['op'] == 'Save') {
+        //save relations
+        $newvalues = array();
+        if (isset($form_state['input']['elobbyist_contact_groups_select'])) {
+          $newvalues = $form_state['input']['elobbyist_contact_groups_select'];
+        }
+
+        $existing_relations = elobbyist_relations_get_keys(elobbyist_relations_get_data('elobbyist_contact', $contact->cid),
+          'elobbyist_group');
+
+        foreach($newvalues as $key => $value)
+        {
+          if ($value) {
+
+            if (isset($existing_relations[$key])) {
+              //relation already exists - remove from array so we'll be left only with the ones to delete
+              unset($existing_relations[$key]);
+            }
+            else
+            {
+              //relation does not exist. create it
+              elobbyist_relations_create('elobbyist_contact', $contact->cid, 'elobbyist_group', $key,
+                $form['elobbyist_contact_groups']['#relation_type']);
+            }
+          }
+        }
+        
+        //delete the relations we are left with
+        foreach($existing_relations as $rid) {
+          relation_delete($rid);
+        }
+      }
+    }
+  }
+}
+
+/*
+ * Queries the groups table
+ */
+function elobbyist_get_groups($type) {
+  $header = array( array('data' => t('Group Name'), 'field' => 'name', 'sort' => 'asc')	);
+  $query = db_select('elobbyist_group', 'cg');
+  
+	$query = $query->condition('type', $type)
+				->extend('TableSort')		//Sorting Extender
+					->orderByHeader($header);//Field to sort on is picked from $header
+  
+  $query = $query->fields ('cg', array (
+                'grpid',
+                'name',
+              )
+          );
+  	
+	return $query->execute()->fetchAllKeyed();
+}
+
+/*
+ * Queries the relation entity
+ * 
+ */
+function elobbyist_relations_get_data($entity_type, $record_id) {
+  return entity_load('relation', array_keys(relation_query($entity_type, $record_id)->execute()));
+}
+
+/*
+ * Create a relation in one line
+ */
+function elobbyist_relations_create($entity1_type, $entity1_id, $entity2_type, $entity2_id, $relation_type) {
+  $endpoints = array();
+  $endpoints[0]['entity_id'] = $entity1_id;
+  $endpoints[0]['entity_type'] = $entity1_type;
+  $endpoints[1]['entity_id'] = $entity2_id;
+  $endpoints[1]['entity_type'] = $entity2_type;
+  $relation = relation_create($relation_type, $endpoints);
+  return relation_save($relation);
+}
+
+/*
+ * Gets relations target endpoint ids, simplifies structure to entity_id => rid array
+ * does not support multiple $target_entity endpoints per relation
+ */
+function elobbyist_relations_get_keys($relations, $target_entity) {
+  $rels = array();
+  
+  foreach($relations as $rid => $relation) {
+    foreach($relation->endpoints as $endpoints) {
+      foreach($endpoints as $endpoint) {
+        //add each group endpoint
+        if ($endpoint['entity_type'] == $target_entity) {
+          $rels[$endpoint['entity_id']] = $rid;
+        }
+      }
+    }
+  }
+  
+  return $rels;
 }

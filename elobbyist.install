@@ -83,12 +83,18 @@ function elobbyist_enable() {
     $relation_type = relation_type_create($info);
     relation_type_save($relation_type);
   }
+  
+  elobbyist_fields_initialize();
 }
 
 /**
  * Implements hook_disable()
  */
 function elobbyist_disable() {
+  
+  //first dispose of fields
+  elobbyist_fields_dispose();
+  
   // delete all the relationship_types and relations 
   // mostly copied from crm_core_relationship module
   $query = db_select('relation_bundles', 'rb')->
@@ -118,6 +124,80 @@ function elobbyist_disable() {
      }
      // finally delete the relationshp_type
      relation_type_delete($type);
+   }
+}
+
+function elobbyist_fields_initialize() {
+  $fields = array();
+
+  // Name field
+  $fields[] = array(
+    'field_name' => 'elobbyist_contact_groups',
+    'type' => 'relation',
+    'entity_types' => array('elobbyist_contact'),
+  );
+
+  // Create the fields if they don't exist
+  foreach ($fields as $field) {
+    $info = field_info_field($field['field_name']);
+    if (empty($info)) {
+      field_create_field($field);
+    }
+  }
+
+  // Create field instances for the type if they don't exist
+  $instances = array();
+  
+  $instances[] = array(
+      'field_name' => 'elobbyist_contact_groups',
+      'entity_type' => 'elobbyist_contact',
+      'bundle' => 'subscriber',
+      'label' => 'Subscriber Groups',
+      'widget_type' => 'relation_default',
+      'display' => array(
+        'default' => array(
+          'label' => 'hidden',
+          'type' => 'relation_default',
+        ),
+        'teaser' => array(
+          'label' => 'hidden',
+          'type' => 'hidden',
+        ),
+      ),
+    );
+  
+  $instances[] = array(
+      'field_name' => 'elobbyist_contact_groups',
+      'entity_type' => 'elobbyist_contact',
+      'bundle' => 'recipient',
+      'label' => 'Recipient Groups',
+      'widget_type' => 'relation_default',
+      'display' => array(
+        'default' => array(
+          'label' => 'hidden',
+          'type' => 'relation_default',
+        ),
+        'teaser' => array(
+          'label' => 'hidden',
+          'type' => 'hidden',
+        ),
+      ),
+    );
+
+  // Create field instances if they don't exist
+  foreach ($instances as $instance) {
+    $info_instance = field_info_instance('elobbyist_contact', $instance['field_name'], $instance['bundle']);
+    if (empty($info_instance)) {
+      field_create_instance($instance);
+    }
+  }
+}
+
+function elobbyist_fields_dispose() {
+   $additional_params = array('include_inactive' => TRUE);
+   $instances = field_read_instances(array('entity_type' => 'elobbyist_contact'), $additional_params);
+   foreach ($instances as $instance) {
+     field_delete_field($instance['field_name']);
    }
 }
 

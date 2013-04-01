@@ -6,6 +6,7 @@ php = 5.3
 
 ; Contrib dependencies
 dependencies[] = relation
+dependencies[] = relation_dummy_field
 dependencies[] = admin_menu_toolbar
 dependencies[] = encrypt
 

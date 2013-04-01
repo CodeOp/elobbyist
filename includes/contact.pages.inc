@@ -80,16 +80,12 @@ function elobbyist_contact_form($form, &$form_state, $contact) {
     );
   }
   
-  /*$form['groups'] = array(
-      '#type' => 'relation_select',
-      '#relation_type' => 'elobbyist_subscriber',
+  $form['elobbyist_contact_groups'] = array(
+      '#type' => 'elobbyist_contact_groups',
+      '#relation_type' => 'elobbyist_' . $contact->type,
       '#title' => t('Groups'),
-      '#weight' => 30,
-      '#view' => array(
-        'name' => 'elobbyist_subscriber_groups',
-        'display' => 'default',
-      ),
-    );*/
+      '#weight' => 40,
+  );
   
   //Add the buttons
   $form['buttons'] = array();
@@ -407,12 +403,13 @@ function elobbyist_contact_delete($cid) {
 function elobbyist_contact_delete_multiple($cids) {
 
   //invoke hook_elobbyist_contact_delete
-  $continue = module_invoke_all('elobbyist_contact_delete', $cids);
+  //example of how the module could be extended to use CRM modules
+  /*$continue = module_invoke_all('elobbyist_contact_delete', $cids);
   
-  if ($continue !== FALSE)
+  if ($continue !== FALSE)*/
     return entity_get_controller('elobbyist_contact')->delete($cids);
   
-  return FALSE; //return false when delete was not made by entity_get_controller
+  //return FALSE; //return false when delete was not made by entity_get_controller
 }
 
 /*
@@ -542,10 +539,11 @@ function elobbyist_recipients_grid() {
 
 function elobbyist_contacts_grid_data($type, &$header) {  
   //invoke hook_elobbyist_contact_grid to allow a different data source
-  $results = module_invoke_all('elobbyist_contact_rows', $header, array('type' => $type));
+  //example of how the module could be extended to use CRM modules
+  /*$results = module_invoke_all('elobbyist_contact_rows', $header, array('type' => $type));
 
   if ($results)
-    return $results;
+    return $results;*/
   
   //Create the Sql query
 	$query = db_select('elobbyist_contact', 'c');
