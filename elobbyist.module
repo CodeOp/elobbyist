@@ -807,8 +807,7 @@ function elobbyist_contact_groups_element_process($element, $form_state, $comple
 function elobbyist_field_attach_submit($entity_type, $entity, $form, &$form_state) {
   if ($entity_type == 'elobbyist_contact') {
     if (isset($form_state['field']) 
-      && key($form_state['field']) == 'elobbyist_contact_groups'
-      && isset($form_state['input']['op'])) {
+      && key($form_state['field']) == 'elobbyist_contact_groups') {
       
       $contact = $form_state['elobbyist_contact'];
       
@@ -817,37 +816,35 @@ function elobbyist_field_attach_submit($entity_type, $entity, $form, &$form_stat
         return;
       }
             
-      if ($form_state['input']['op'] == 'Save') {
-        //save relations
-        $newvalues = array();
-        if (isset($form_state['input']['elobbyist_contact_groups_select'])) {
-          $newvalues = $form_state['input']['elobbyist_contact_groups_select'];
-        }
+      //save relations
+      $newvalues = array();
+      if (isset($form_state['input']['elobbyist_contact_groups_select'])) {
+        $newvalues = $form_state['input']['elobbyist_contact_groups_select'];
+      }
 
-        $existing_relations = elobbyist_relations_get_keys(elobbyist_relations_get_data('elobbyist_contact', $contact->cid),
-          'elobbyist_group');
+      $existing_relations = elobbyist_relations_get_keys(elobbyist_relations_get_data('elobbyist_contact', $contact->cid),
+        'elobbyist_group');
 
-        foreach($newvalues as $key => $value)
-        {
-          if ($value) {
+      foreach($newvalues as $key => $value)
+      {
+        if ($value) {
 
-            if (isset($existing_relations[$key])) {
-              //relation already exists - remove from array so we'll be left only with the ones to delete
-              unset($existing_relations[$key]);
-            }
-            else
-            {
-              //relation does not exist. create it
-              elobbyist_relations_create('elobbyist_contact', $contact->cid, 'elobbyist_group', $key,
-                $form['elobbyist_contact_groups']['#relation_type']);
-            }
+          if (isset($existing_relations[$key])) {
+            //relation already exists - remove from array so we'll be left only with the ones to delete
+            unset($existing_relations[$key]);
+          }
+          else
+          {
+            //relation does not exist. create it
+            elobbyist_relations_create('elobbyist_contact', $contact->cid, 'elobbyist_group', $key,
+              $form['elobbyist_contact_groups']['#relation_type']);
           }
         }
-        
-        //delete the relations we are left with
-        foreach($existing_relations as $rid) {
-          relation_delete($rid);
-        }
+      }
+
+      //delete the relations we are left with
+      foreach($existing_relations as $rid) {
+        relation_delete($rid);
       }
     }
   }
