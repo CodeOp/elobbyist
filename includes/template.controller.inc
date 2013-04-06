@@ -8,7 +8,7 @@ class ELobbyistTemplateController extends DrupalDefaultEntityController {
       'name' => '',
       'subject' => '',
       'body' => '',
-      'status' => '',
+      'status' => ELOBBYIST_TEMPLATE_STATUS_DRAFT,
     );
   }
   

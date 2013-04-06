@@ -16,7 +16,7 @@ function elobbyist_group_form($form, &$form_state, $entity) {
   $form['#elobbyist_group'] = $entity;
   $form_state['elobbyist_group'] = $entity;
   
-  $new_record = empty($entity->grpid);
+  $new_record = empty($entity->grpid); 
   
   // Set fields
   $form['name'] = array(
@@ -46,6 +46,7 @@ function elobbyist_group_form($form, &$form_state, $entity) {
       '#value' => t('Delete'),
       '#weight' => 120,
       '#submit' => array('elobbyist_group_form_delete_submit'),
+      '#limit_validation_errors' => array(),       // No validation.
     );
   }
   
@@ -92,7 +93,7 @@ function elobbyist_group_page_view($entity, $view_mode = 'full') {
   $entity->content['#attached']['css'] = array(
     drupal_get_path('module', 'elobbyist') . '/includes/elobbyist.css',
   );
-  
+    
   // Build fields content.
   field_attach_prepare_view('elobbyist_group', 
     array($entity->grpid => $entity), $view_mode);
@@ -221,24 +222,8 @@ function elobbyist_group_delete_confirm_submit($form, &$form_state) {
   }
 }
 
-function elobbyist_group_delete($grpid) {
-  elobbyist_group_delete_multiple(array($grpid));
-}
-
-function elobbyist_group_delete_multiple($ids) {
-
-  //invoke hook_elobbyist_contact_delete
-  //example of how the module could be extended to use CRM modules
-  /*$continue = module_invoke_all('elobbyist_group_delete', $ids);
-  
-  if ($continue !== FALSE)*/
-    return entity_get_controller('elobbyist_group')->delete($ids);
-  
-  //return FALSE; //return false when delete was not made by entity_get_controller
-}
-
 /*
- * Display list of subscribers
+ * Display list of groups
  */
 function elobbyist_contacts_groups_grid($type) {
  
@@ -291,6 +276,57 @@ function elobbyist_contacts_groups_grid($type) {
 	return ($html);
 }
 
+
+/*
+ * Display list of a group members
+ */
+function elobbyist_group_contacts_grid($entity) {
+ 
+  //Create a list of headers for sorting
+	$header = array( 
+              array('data' => t('Full Name'), 'field' => 'name')	,
+              array('data' => t('Email'), 'field' => 'email'),
+              array('data' => '') 
+  );
+  
+  elobbyist_group_page_title($entity);
+
+	//Create the Sql query
+	$results = elobbyist_group_contacts_grid_data($entity->grpid);
+
+  $rows = array();
+  if ($results) {
+    foreach ($results as $row) {
+      $rows[] = array(
+            'data' => array(
+                l($row->name, 'elobbyist/contact/'. $row->cid .'/edit'),
+                $row->email,
+                l(t('Edit'), 'elobbyist/contact/'. $row->cid .'/edit'),
+            )
+      );
+    }
+  }
+	
+	//Theme the html table
+	$html = theme('table', 
+				array(
+					'header' => $header,
+					'rows'=>$rows,
+					'sticky' => TRUE,
+					'empty' => t('No records.'),
+				)
+			);
+	
+	//Append pager
+	$html .= theme('pager',
+				array(
+					'tags' => array()
+				)
+			);
+			
+	return $html;
+}
+
 function elobbyist_contacts_groups_grid_data($type, &$header) {  
   //invoke hook_elobbyist_contact_grid to allow a different data source
   //example of how the module could be extended to use CRM modules
@@ -304,7 +340,7 @@ function elobbyist_contacts_groups_grid_data($type, &$header) {
   
 	$query = $query->condition('type', $type)
 				->extend('PagerDefault') 	//Pager Extender
-					->limit(25)				//results per page
+					->limit(variable_get('elobbyist_records_per_page', ELOBBYIST_DEFAULT_RECORDS_PER_PAGE))				//results per page
 				->extend('TableSort')		//Sorting Extender
 					->orderByHeader($header);//Field to sort on is picked from $header
   
@@ -315,4 +351,27 @@ function elobbyist_contacts_groups_grid_data($type, &$header) {
           );
   	
 	return $query->execute();
+}
+
+/*
+ * Get contacts by group
+ */
+function elobbyist_group_contacts_grid_data($grpid) {
+  $relations = elobbyist_relations_get_data('elobbyist_group', $grpid);
+    
+  $cids = array();
+    
+  foreach($relations as $relation) {
+    foreach($relation->endpoints as $endpoints) {
+      foreach($endpoints as $endpoint) {
+        //add each group endpoint
+        if ($endpoint['entity_type'] == 'elobbyist_contact') {
+          //load contact
+          $cids[] = $endpoint['entity_id'];
+        }
+      }
+    }
+  }
+  
+  return entity_load('elobbyist_contact', $cids);
 }

@@ -24,7 +24,7 @@ class ELobbyistContactController extends DrupalDefaultEntityController {
       'email' => '',
       'stype' => '',
       'providerid' => '',
-      'notify' => '',
+      'notify' => variable_get('elobbyist_notify_default_admin', ELOBBYIST_DEFAULT_NOTIFY_ON_EMAILS_SENT_FOR_ADMIN_FORM),
       'form' => '',
     );
   }

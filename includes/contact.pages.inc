@@ -41,6 +41,7 @@ function elobbyist_contact_form($form, &$form_state, $contact) {
     '#maxlength' => 254,
     '#size' => 50,
     '#required' => TRUE,
+    '#rules' => array('email'),
   );
     
   if ($contact->type == 'subscriber') {
@@ -104,6 +105,7 @@ function elobbyist_contact_form($form, &$form_state, $contact) {
       '#value' => t('Delete'),
       '#weight' => 120,
       '#submit' => array('elobbyist_contact_form_delete_submit'),
+      '#limit_validation_errors' => array(),       // No validation.
     );
   }
   
@@ -112,162 +114,6 @@ function elobbyist_contact_form($form, &$form_state, $contact) {
   field_attach_form('elobbyist_contact', $contact, $form, $form_state);
   
   return $form;
-}
-
-function elobbyist_contact_page_view($entity, $view_mode = 'full') {
-  
-  elobbyist_contact_page_title($entity);
-  
-  // Remove previously built content, if exists.
-  $entity->content = array();
-  
-  $entity->content['#attached']['css'] = array(
-    drupal_get_path('module', 'elobbyist') . '/includes/elobbyist.css',
-  );
-      
-  $entity->content['email'] = array(
-    '#markup' => 
-      theme('elobbyist_field',
-        array(
-          'title' => t('Email'),
-          'item' => filter_xss($entity->email),
-        )
-     ),
-    '#weight' => 0,
-  );
-  
-  if ($entity->type == 'subscriber') {
-    if (!empty($entity->providerid)) {
-      //since the list of providers is cached and not so long, 
-      //it's ok to pull it for getting the coresponding provider name of a specific record
-      $providers = elobbyist_get_email_providers();
-
-      $entity->content['providerid'] = array(
-        '#markup' => theme('elobbyist_field',
-            array(
-              'title' => t('Provider'),
-              'item' => filter_xss($providers[$entity->providerid]),
-            )
-         ),
-        '#weight' => 5,
-      );
-    }
-  
-    $entity->content['notify'] = array(
-      '#markup' => theme('elobbyist_field',
-          array(
-            'title' => t('Notify on each mail'),
-            'item' => $entity->notify ? t('Yes') : t('No'),
-          )
-       ),
-      '#weight' => 20,
-    );
-
-    if (!empty($entity->form)) {
-      $form_types = elobbyist_form_types();
-      $entity->content['form'] = array(
-        '#markup' => theme('elobbyist_field',
-            array(
-              'title' => t('Created through'),
-              'item' => $form_types[$entity->form],
-            )
-         ),
-        '#weight' => 30,
-      );
-    }
-  }
-  
-  $entity->content['created'] = array(
-    '#markup' => theme('elobbyist_field',
-          array(
-            'title' => t('Created on'),
-            'item' => format_date($entity->created),
-          )
-       ),
-      '#weight' => 46,
-  );
-  
-  $entity->content['changed'] = array(
-    '#markup' => theme('elobbyist_field',
-          array(
-            'title' => t('Modified on'),
-            'item' => format_date($entity->changed),
-          )
-       ),
-      '#weight' => 47,
-  );
-  
-  // Build fields content.
-  field_attach_prepare_view('elobbyist_contact', 
-    array($entity->cid => $entity), $view_mode);
-  
-  entity_prepare_view('elobbyist_contact', array($entity->cid => $entity));
-  
-  $entity->content += field_attach_view('elobbyist_contact', $entity, $view_mode);
-  
-  return $entity->content;
-}
-
-/*
- * Add record page callback
- */
-function elobbyist_contact_add($type) {
-  $types = elobbyist_contact_types();
-  $type  = (isset($type) ? str_replace('-', '_', $type) : NULL);
-  if (empty($types[$type])) {
-    return MENU_NOT_FOUND;
-  }
-  
-  $contact = entity_get_controller('elobbyist_contact')->create($type);
-  
-  //set subscription type to persistent for subscribers
-  if ($type == 'subscriber') {
-    $contact->stype = ELOBBYIST_SUBSCRIBER_TYPE_PERSISTENT;
-    $contact->form = ELOBBYIST_FORM_ADMIN;
-  }
-  
-  $contact->form = ELOBBYIST_FORM_ADMIN;
-  
-  drupal_set_title(t('New @name', array('@name' => $types[$type]->name)),
-    PASS_THROUGH);
-  
-  return drupal_get_form('elobbyist_contact_form', $contact);
-}
-
-/*
- * Edit record page callback
- */
-function elobbyist_contact_page_edit($contact) {
-  elobbyist_contact_page_title($contact);
-  
-  return drupal_get_form('elobbyist_contact_form', $contact);
-}
-
-function elobbyist_contact_page_title($contact) {
-  $types = elobbyist_contact_types();
-  drupal_set_title(t('@type: @title', array(
-    '@type' => $types[$contact->type]->name,
-    '@title' => $contact->name, )), PASS_THROUGH);
-}
-
-/**
- * Gets subscriber built in types
- */
-function elobbyist_subscriber_types() {
-  return array(
-    ELOBBYIST_SUBSCRIBER_TYPE_ONE_TIME => t('One-Time'),
-    ELOBBYIST_SUBSCRIBER_TYPE_PERSISTENT => t('Persistent'),
-  );
-}
-
-/*
- * Get form types
- */
-function elobbyist_form_types() {
-  return array(
-    ELOBBYIST_FORM_ADMIN => t('admin form'),
-    ELOBBYIST_FORM_PUBLIC => t('public form'),
-  );
 }
 
 /*
@@ -283,7 +129,10 @@ function elobbyist_contact_form_validate($form, &$form_state) {
     unset($form_state['values']['pass']);
   }
   
-  //Field validation
+  //verify that email is unique
+  elobbyist_contact_unique_email($contact->cid, $form_state['values']['email']);
+      
+  //Field API validation
   field_attach_form_validate('elobbyist_contact', $contact, $form, $form_state);
 }
 
@@ -396,20 +245,185 @@ function elobbyist_contact_delete_confirm_submit($form, &$form_state) {
   }
 }
 
-function elobbyist_contact_delete($cid) {
-  elobbyist_contact_delete_multiple(array($cid));
+/*
+ * Validate that email is unique
+ */
+function elobbyist_contact_unique_email($cid, $email) {
+  //Execute a count query to see if there's other similar values.
+  
+  $query = db_select('elobbyist_contact', 'c');
+  
+  $query->addExpression('COUNT(cid)', 'contact_count');
+  
+  $query->condition('email', $email);
+    
+  if (!empty($cid))
+        $query = $query->condition('cid', $cid, '<>');
+
+  $query = $query->execute();
+  
+  $col =  $query->fetchColumn();
+
+  if ($col > 0) {
+    form_set_error('email', t('Email address must be unique in the contacts table. @email is already in use for another contact.',
+      array('@email' => $email)));
+  }
 }
 
-function elobbyist_contact_delete_multiple($cids) {
+function elobbyist_contact_page_view($entity, $view_mode = 'full') {
+  
+  elobbyist_contact_page_title($entity);
+  
+  // Remove previously built content, if exists.
+  $entity->content = array();
+  
+  $entity->content['#attached']['css'] = array(
+    drupal_get_path('module', 'elobbyist') . '/includes/elobbyist.css',
+  );
+      
+  $entity->content['email'] = array(
+    '#markup' => 
+      theme('elobbyist_field',
+        array(
+          'title' => t('Email'),
+          'item' => filter_xss($entity->email),
+        )
+     ),
+    '#weight' => -50,
+  );
+  
+  if ($entity->type == 'subscriber') {
+    if (!empty($entity->providerid)) {
+      //since the list of providers is cached and not so long, 
+      //it's ok to pull it for getting the coresponding provider name of a specific record
+      $providers = elobbyist_get_email_providers();
 
-  //invoke hook_elobbyist_contact_delete
-  //example of how the module could be extended to use CRM modules
-  /*$continue = module_invoke_all('elobbyist_contact_delete', $cids);
+      $entity->content['providerid'] = array(
+        '#markup' => theme('elobbyist_field',
+            array(
+              'title' => t('Provider'),
+              'item' => filter_xss($providers[$entity->providerid]),
+            )
+         ),
+        '#weight' => -45,
+      );
+    }
   
-  if ($continue !== FALSE)*/
-    return entity_get_controller('elobbyist_contact')->delete($cids);
+    $entity->content['notify'] = array(
+      '#markup' => theme('elobbyist_field',
+          array(
+            'title' => t('Notify on each mail'),
+            'item' => $entity->notify ? t('Yes') : t('No'),
+          )
+       ),
+      '#weight' => -35,
+    );
+
+    if (!empty($entity->form)) {
+      $form_types = elobbyist_form_types();
+      $entity->content['form'] = array(
+        '#markup' => theme('elobbyist_field',
+            array(
+              'title' => t('Created through'),
+              'item' => $form_types[$entity->form],
+            )
+         ),
+        '#weight' => -30,
+      );
+    }
+  }
   
-  //return FALSE; //return false when delete was not made by entity_get_controller
+  $entity->content['created'] = array(
+    '#markup' => theme('elobbyist_field',
+          array(
+            'title' => t('Created on'),
+            'item' => format_date($entity->created),
+          )
+       ),
+      '#weight' => -16,
+  );
+  
+  $entity->content['changed'] = array(
+    '#markup' => theme('elobbyist_field',
+          array(
+            'title' => t('Modified on'),
+            'item' => format_date($entity->changed),
+          )
+       ),
+      '#weight' => -15,
+  );
+  
+  // Build fields content.
+  field_attach_prepare_view('elobbyist_contact', 
+    array($entity->cid => $entity), $view_mode);
+  
+  entity_prepare_view('elobbyist_contact', array($entity->cid => $entity));
+  
+  $entity->content += field_attach_view('elobbyist_contact', $entity, $view_mode);
+  
+  return $entity->content;
+}
+
+/*
+ * Add record page callback
+ */
+function elobbyist_contact_add($type) {
+  $types = elobbyist_contact_types();
+  $type  = (isset($type) ? str_replace('-', '_', $type) : NULL);
+  if (empty($types[$type])) {
+    return MENU_NOT_FOUND;
+  }
+  
+  $contact = entity_get_controller('elobbyist_contact')->create($type);
+  
+  //set subscription type to persistent for subscribers
+  if ($type == 'subscriber') {
+    $contact->stype = ELOBBYIST_SUBSCRIBER_TYPE_PERSISTENT;
+    $contact->form = ELOBBYIST_FORM_ADMIN;
+  }
+  
+  $contact->form = ELOBBYIST_FORM_ADMIN;
+  
+  drupal_set_title(t('New @name', array('@name' => $types[$type]->name)),
+    PASS_THROUGH);
+  
+  return drupal_get_form('elobbyist_contact_form', $contact);
+}
+
+/*
+ * Edit record page callback
+ */
+function elobbyist_contact_page_edit($contact) {
+  elobbyist_contact_page_title($contact);
+  
+  return drupal_get_form('elobbyist_contact_form', $contact);
+}
+
+function elobbyist_contact_page_title($contact) {
+  $types = elobbyist_contact_types();
+  drupal_set_title(t('@type: @title', array(
+    '@type' => $types[$contact->type]->name,
+    '@title' => $contact->name, )), PASS_THROUGH);
+}
+
+/**
+ * Gets subscriber built in types
+ */
+function elobbyist_subscriber_types() {
+  return array(
+    ELOBBYIST_SUBSCRIBER_TYPE_ONE_TIME => t('One-Time'),
+    ELOBBYIST_SUBSCRIBER_TYPE_PERSISTENT => t('Persistent'),
+  );
+}
+
+/*
+ * Get form types
+ */
+function elobbyist_form_types() {
+  return array(
+    ELOBBYIST_FORM_ADMIN => t('admin form'),
+    ELOBBYIST_FORM_PUBLIC => t('public form'),
+  );
 }
 
 /*
@@ -533,7 +547,7 @@ function elobbyist_recipients_grid() {
 				)
 			);
 			
-	return ($html);
+	return $html;
   
 }
 
@@ -556,7 +570,7 @@ function elobbyist_contacts_grid_data($type, &$header) {
 
 	$query = $query->condition('type', $type)
 				->extend('PagerDefault') 	//Pager Extender
-					->limit(25)				//results per page
+					->limit(variable_get('elobbyist_records_per_page', ELOBBYIST_DEFAULT_RECORDS_PER_PAGE))				//results per page
 				->extend('TableSort')		//Sorting Extender
 					->orderByHeader($header);//Field to sort on is picked from $header
   

@@ -3,12 +3,15 @@ description = Mass lobby by email through subscribers' own email accounts
 core = 7.x
 package = Email Lobbyist
 php = 5.3
+configure = admin/config/content/elobbyist
 
 ; Contrib dependencies
 dependencies[] = relation
 dependencies[] = relation_dummy_field
 dependencies[] = admin_menu_toolbar
 dependencies[] = encrypt
+dependencies[] = ckeditor
+dependencies[] = clientside_validation_fapi
 
 ; Controller Classes
 files[] = includes/contact.controller.inc

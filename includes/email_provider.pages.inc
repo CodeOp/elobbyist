@@ -64,6 +64,7 @@ function elobbyist_email_provider_form($form, &$form_state, $entity) {
       '#value' => t('Delete'),
       '#weight' => 120,
       '#submit' => array('elobbyist_email_provider_form_delete_submit'),
+      '#limit_validation_errors' => array(),       // No validation.
     );
   }
   
@@ -159,15 +160,7 @@ function elobbyist_email_provider_delete_confirm_submit($form, &$form_state) {
     );
   }
   
-  $form_state['redirect'] = '<front>';
-}
-
-function elobbyist_email_provider_delete($id) {
-  elobbyist_email_provider_delete_multiple(array($id));
-}
-
-function elobbyist_email_provider_delete_multiple($ids) {
-  return entity_get_controller('elobbyist_email_provider')->delete($ids);
+  $form_state['redirect'] = 'elobbyist/email-providers';
 }
 
 /*
@@ -180,7 +173,7 @@ function elobbyist_email_provider_grid() {
 	//Create the Sql query
 	$query = db_select('elobbyist_email_provider', 'p')
 				->extend('PagerDefault') 	//Pager Extender
-					->limit(10)				//results per page
+					->limit(variable_get('elobbyist_records_per_page', ELOBBYIST_DEFAULT_RECORDS_PER_PAGE))				//results per page
 				->extend('TableSort')		//Sorting Extender
 					->orderByHeader($header)//Field to sort on is picked from $header
 				->fields ('p', array (

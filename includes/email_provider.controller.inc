@@ -6,7 +6,7 @@ class ELobbyistEmailProviderController extends DrupalDefaultEntityController {
       'providerid' => '',
       'name' => '',
       'smtphost' => '',
-      'smtpport' => ELOBBYIST_DEFAULT_SMTP_PORT,
+      'smtpport' => variable_get('elobbyist_smtp_port_default', ELOBBYIST_DEFAULT_SMTP_PORT),
     );
   }
   
@@ -74,6 +74,8 @@ class ELobbyistEmailProviderController extends DrupalDefaultEntityController {
       db_delete('elobbyist_email_provider')
         ->condition('providerid', $ids, 'IN')
         ->execute();
+      
+      elobbyist_foreign_key_cascade_unset('elobbyist_contact', 'providerid', $ids);
 
       foreach($entities as $entity) {        
         field_attach_delete('elobbyist_email_provider', $entity);
