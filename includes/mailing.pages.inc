@@ -11,11 +11,11 @@
 function elobbyist_mailing_form($form, &$form_state, $entity) {
   // Set the id to identify this as a record edit form.
   $form['#id'] = 'elobbyist_mailing-form';
-  
+
   // Save the record for later, in case we need it.
   $form['#elobbyist_mailing'] = $entity;
   $form_state['elobbyist_mailing'] = $entity;
-  
+
   // Set fields
   $form['name'] = array(
     '#type' => 'textfield',
@@ -37,7 +37,7 @@ function elobbyist_mailing_form($form, &$form_state, $entity) {
       '#weight' => 0,
       '#required' => TRUE,
     );
-      
+
   $form['status'] = array(
     '#type' => 'select',
     '#title' => t('Status'),
@@ -69,7 +69,7 @@ function elobbyist_mailing_form($form, &$form_state, $entity) {
     '#options' => elobbyist_mailing_schedule_type_list(),
     '#required' => TRUE,
   );
-  
+
   $form['start'] = array(
     '#type' => 'date_popup',
     '#date_type' => DATE_UNIX,
@@ -141,12 +141,48 @@ function elobbyist_mailing_form($form, &$form_state, $entity) {
   return $form;
 }
 
+/*
+ * Add subscription form functionality
+ * 
+ * See contact page to check fields
+ * Set form field to public page, allow to set subscription
+ * 
+ * Save to mailing from field groups - according to subscription
+ * 
+ */
 function elobbyist_mailing_page_subscribe($form, &$form_state, $entity) {
   
 }
 
 function elobbyist_mailing_page_form($form, &$form_state, $entity) {
+  // Set the id to identify this as a record edit form.
+  $form['#id'] = 'elobbyist_mailing-page-form';
+
+  // Save the record for later, in case we need it.
+  $form['#elobbyist_mailing'] = $entity;
+  $form_state['elobbyist_mailing'] = $entity;
   
+  $form['page'] = array(
+    '#type' => 'text_format',
+    '#title' => t('Page content'),
+    '#default_value' => $entity->page,
+    '#weight' => 20,
+    '#cols' => 80,
+    '#rows' => 20,
+    '#required' => TRUE,
+  );
+  
+  //Add the buttons
+  $form['buttons'] = array();
+  $form['buttons']['#weight'] = 100;
+  $form['buttons']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save'),
+    '#weight' => 100,
+    '#submit' => array('elobbyist_mailing_page_form_submit'),
+  );
+  
+  return $form;
 }
 
 function elobbyist_mailing_status_list() {
@@ -228,24 +264,6 @@ function elobbyist_mailing_form_submit($form, &$form_state) {
   
   $new_record = empty($entity->mid);
   
-  //create a page, if required, and save its id to the saved record's pagenid
-  /*if ( empty($entity->pagenid) &&
-       ( $entity->status == ELOBBYIST_MAILING_STATUS_ACTIVE ||
-         $entity->status == ELOBBYIST_MAILING_STATUS_DRAFT) && 
-         $entity->schedule = ELOBBYIST_MAILING_SCHEDULE_ON_GOING
-    ) {
-    if (user_access('create page content')) {
-      $entity->pagenid = elobbyist_mailing_page_create($entity);
-      if (!empty($entity->pagenid)) {
-        drupal_set_message(t('A new page was created successfully.'), 'status');
-      }
-    }
-    else {
-      //notify, the user has no permission to create pages
-      drupal_set_message(t('A new page was not created, because you do not have a permission to create pages'), 'warning');
-    }
-  }*/
-  
   // Save the record.
   $entity = elobbyist_mailing_save($entity);
   
@@ -274,6 +292,29 @@ function elobbyist_mailing_form_submit($form, &$form_state) {
     
     if ($new_record) {
       $form_state['redirect'] = 'elobbyist/mailing/' . $entity->mid . '/edit';
+    }
+  }
+}
+
+function elobbyist_mailing_page_form_submit($form, &$form_state) {
+  
+  $entity = $form_state['elobbyist_mailing'];
+  
+  $entity->page = $form_state['values']['page']['value'];
+  
+  $entity = elobbyist_mailing_save($entity);
+  
+  // Notify the user.
+  if ($entity) {
+    if ($entity->status == ELOBBYIST_MAILING_STATUS_ACTIVE) {
+      drupal_set_message(
+        t('Public call to action was saved. Notice @pagelink is now published.',
+          array('@pagelink' => l(t('the page'), 'elobbyist/' . $entity->mid))));
+    }
+    elseif ($entity->status == ELOBBYIST_MAILING_STATUS_DRAFT) {
+      drupal_set_message(
+        t('Public call to action was saved. Notice @pagelink is only accessible to authenticated users, as long as the mailing is in draft status',
+          array('@pagelink' => l(t('the page'), 'elobbyist/' . $entity->mid))));
     }
   }
 }
@@ -442,14 +483,85 @@ function elobbyist_mailing_page_view($entity, $view_mode = 'full') {
  * Build the call-to-action public page
  * 
  * For the page to be displayed - a mailing must be active, of schedule type on-going and start date has past
- * If not displayed: a general "Oops! the page you requested cannot be found." message is to be shown
+ * If not displayed: a general "Oops! the page you requested cannot be found" message is to be shown
  * 
  * For the page to receive subscribers, end date has yet to pass, taking into account also a setting of X minutes/hours even before end date
  */
 function elobbyist_mailing_action_page($entity) {
-  elobbyist_mailing_page_title($entity);
   
-  //return drupal_get_form('elobbyist_mailing_page_subscribe', $entity);
+  $bExit = FALSE;
+  $bSubscriptionForm = FALSE;
+  
+  if (!isset($entity) || 
+      !isset($entity->schedule) || 
+      $entity->schedule != ELOBBYIST_MAILING_SCHEDULE_ON_GOING) {
+    $bExit = TRUE;
+  }
+  else {
+    switch($entity->status) {
+      case ELOBBYIST_MAILING_STATUS_ACTIVE:
+        if ($entity->start > REQUEST_TIME) {
+          if (!user_access('edit email lobbyist mailings')) {
+            $bExit = TRUE;
+             break;
+          }
+          else {
+            drupal_set_message(t('The page is not published, as its mailing has not started yet.'), 'warning');
+            break;
+          }
+        }
+        //user should have anonymous access
+        if (!user_access('view email lobbyist published pages')) {
+          $bExit = TRUE;
+          break;
+        }        
+        if (REQUEST_TIME > $entity->end) {
+          $bSubscriptionForm = TRUE;
+        }
+        else {
+          drupal_set_message(t('This action has ended.'), 'status');
+        }
+        break;
+      case ELOBBYIST_MAILING_STATUS_DRAFT:
+      case ELOBBYIST_MAILING_STATUS_CLOSED:
+      case ELOBBYIST_MAILING_STATUS_CANCELLED:
+        if (!user_access('edit email lobbyist mailings')) {
+          $bExit = TRUE;
+           break;
+        }
+        $statuses = elobbyist_mailing_status_list();
+        drupal_set_message(t('The page is not published, as its mailing is in status @status.',
+          array('@status' => $statuses[$entity->status])
+          ), 'warning');
+        break;
+      default:
+        //unknown status
+        $bExit = TRUE;
+        break;
+    }
+  }
+  
+  if ($bExit) {
+    drupal_set_title(t('Oops! The page you requested cannot be found'));
+    return array();
+  }
+
+  drupal_set_title($entity->name, PASS_THROUGH);
+
+  // Remove previously built content, if exists.
+  $entity->content = array();
+    
+  $entity->content['page'] = array(
+    '#markup' => $entity->page,
+    '#weight' => -50,
+  );
+  
+  if ($bSubscriptionForm) {
+    return drupal_get_form('elobbyist_mailing_page_subscribe', $entity);
+  }
+  else {
+    return $entity->content;
+  }
 }
 
 /*
@@ -458,6 +570,38 @@ function elobbyist_mailing_action_page($entity) {
  */
 function elobbyist_mailing_action_page_edit($entity) {
   elobbyist_mailing_page_title($entity);
+  
+  if ($entity->schedule != ELOBBYIST_MAILING_SCHEDULE_ON_GOING) {
+    drupal_set_message(t('This section is only relevant for an on-going schedule type.'), 'warning');
+    return array();
+  }
+    
+  switch($entity->status) {
+    case ELOBBYIST_MAILING_STATUS_ACTIVE:
+      if ($entity->end >= REQUEST_TIME) {
+        drupal_set_message(t('The public call to action page can be edited, but it is not published because the mailing end date has past.'), 'warning');
+      }
+      elseif ($entity->start >= REQUEST_TIME) {
+        drupal_set_message(t('The public call to action page is published.'), 'status');
+      }
+      break;
+    case ELOBBYIST_MAILING_STATUS_DRAFT:
+      if (REQUEST_TIME > $entity->end) {
+        drupal_set_message(t('The public call to action page can be edited, but it is not published because the mailing end date has past.'), 'warning');
+      }
+      else {
+        drupal_set_message(t('The public call to action page can be edited, but it is not published because the mailing is in draft status.'), 'warning');
+      }
+      break;
+    default:
+      //if the page isn't in status draft or active, it should be read-only
+      $entity->content = array();
+      $entity->content['page'] = array(
+        '#markup' => $entity->page,
+      );
+      drupal_set_message(t('This section is read-only and the public call to action page is not published when the mailing is in closed or cancelled status'), 'warning');
+      return $entity->content;
+  }
   
   return drupal_get_form('elobbyist_mailing_page_form', $entity);
 }

@@ -115,19 +115,19 @@ function elobbyist_template_form_submit($form, &$form_state) {
   $entity->subject = $form_state['values']['subject'];
   $entity->body = $form_state['values']['body']['value'];
   $entity->status = $form_state['values']['status'];
-    
+
   // Notify field widgets.
   field_attach_submit('elobbyist_template', $entity, $form, $form_state);
-  
+
   $new_record = empty($entity->tid);
-  
+
   // Save the record.
   $entity = elobbyist_template_save($entity);
-  
+
   // Notify the user.
   if ($entity) {
     drupal_set_message(t('Template saved.'));
-    
+
     if ($new_record) {
       $form_state['redirect'] = 'elobbyist/template/' . $entity->tid . '/edit';
     }
