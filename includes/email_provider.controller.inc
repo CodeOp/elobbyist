@@ -19,8 +19,6 @@ class ELobbyistEmailProviderController extends DrupalDefaultEntityController {
       // Determine if we will be inserting a new record
       $entity->is_new = empty($entity->providerid);
             
-      $update = TRUE;
-            
       // Give modules the opportunity to prepare field data for
       // saving.
       field_attach_presave('elobbyist_email_provider', $entity);

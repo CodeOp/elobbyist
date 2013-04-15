@@ -27,10 +27,43 @@ function elobbyist_schema() {
   return $schema;
 }
 
+/*
+ * Implements hook_install
+ */
+function elobbyist_install() {
+  $role = user_role_load_by_name('anonymous');
+  if (isset($role->rid)) {
+    user_role_grant_permissions($role->rid, array('view email lobbyist published pages'));
+  }
+}
+
+/*
+ * Implements hook_uninstall
+ */
+function elobbyist_uninstall() {
+  $role = user_role_load_by_name('anonymous');
+  if (isset($role->rid)) {
+    user_role_revoke_permissions($rid, array('view email lobbyist published pages'));
+  }
+}
+
 /**
  * Implements hook_enable()
  */
 function elobbyist_enable() {
+  elobbyist_relation_types_initialize();
+  elobbyist_fields_initialize();
+}
+
+/**
+ * Implements hook_disable()
+ */
+function elobbyist_disable() {
+  elobbyist_fields_dispose();  
+  elobbyist_relations_dispose();
+}
+
+function elobbyist_relation_types_initialize() {
   //create relation types in use
   $relation_types_info = array(
     array(
@@ -62,9 +95,9 @@ function elobbyist_enable() {
       'directional' => TRUE,
       'transitive' => TRUE,
       'r_unique' => TRUE,
-      'source_bundles' => array('elobbyist_contact:subscriber', 
+      'source_bundles' => array('elobbyist_mailing:*'),
+      'target_bundles' => array('elobbyist_contact:subscriber', 
         'elobbyist_group:subscribers'),
-      'target_bundles' => array('elobbyist_mailing:*'),
     ),
     array(
       'relation_type' => 'elobbyist_to',
@@ -73,9 +106,9 @@ function elobbyist_enable() {
       'directional' => TRUE,
       'transitive' => TRUE,
       'r_unique' => TRUE,
-      'source_bundles' => array('elobbyist_contact:recipient', 
+      'source_bundles' => array('elobbyist_mailing:*'),
+      'target_bundles' => array('elobbyist_contact:recipient', 
         'elobbyist_group:recipients'),
-      'target_bundles' => array('elobbyist_mailing:*'),
     ),
   );
   
@@ -83,58 +116,30 @@ function elobbyist_enable() {
     $relation_type = relation_type_create($info);
     relation_type_save($relation_type);
   }
-  
-  elobbyist_fields_initialize();
-}
-
-/**
- * Implements hook_disable()
- */
-function elobbyist_disable() {
-  
-  //first dispose of fields
-  elobbyist_fields_dispose();
-  
-  // delete all the relationship_types and relations 
-  // mostly copied from crm_core_relationship module
-  $query = db_select('relation_bundles', 'rb')->
-           fields('rb', array('relation_type'))->
-           condition('rb.entity_type', 
-             array('elobbyist_contact', 
-                   'elobbyist_group',
-                   'elobbyist_mailing', 
-                   'elobbyist_activity'), 'IN')->
-           distinct()->
-           execute();
-
-   while ($record = $query->fetchAssoc()) {
-     $relationship_type[] = $record['relation_type'];
-   }
-
-   foreach ($relationship_type as $type) {
-     // look into the database for each type
-     $relationship_query = db_select('relation', 'r')->
-           fields('r', array('rid'))->
-           condition('r.relation_type', $type)->
-           execute();
-
-     while ($result = $relationship_query->fetchAssoc()) {
-       // delete all the relationships of that type
-       relation_delete($result['rid']);
-     }
-     // finally delete the relationshp_type
-     relation_type_delete($type);
-   }
 }
 
 function elobbyist_fields_initialize() {
   $fields = array();
 
-  // Name field
+  // contact groups
   $fields[] = array(
     'field_name' => 'elobbyist_contact_groups',
     'type' => 'relation',
     'entity_types' => array('elobbyist_contact'),
+  );
+  
+  //mailing from
+  $fields[] = array(
+    'field_name' => 'elobbyist_from',
+    'type' => 'relation',
+    'entity_types' => array('elobbyist_mailing'),
+  );
+  
+  //mailing to
+  $fields[] = array(
+    'field_name' => 'elobbyist_to',
+    'type' => 'relation',
+    'entity_types' => array('elobbyist_mailing'),
   );
 
   // Create the fields if they don't exist
@@ -183,10 +188,46 @@ function elobbyist_fields_initialize() {
         ),
       ),
     );
+  
+  $instances[] = array(
+      'field_name' => 'elobbyist_from',
+      'entity_type' => 'elobbyist_mailing',
+      'bundle' => 'elobbyist_mailing',
+      'label' => 'From',
+      'widget_type' => 'relation_default',
+      'display' => array(
+        'default' => array(
+          'label' => 'hidden',
+          'type' => 'relation_default',
+        ),
+        'teaser' => array(
+          'label' => 'hidden',
+          'type' => 'hidden',
+        ),
+      ),
+    );
+  
+  $instances[] = array(
+      'field_name' => 'elobbyist_to',
+      'entity_type' => 'elobbyist_mailing',
+      'bundle' => 'elobbyist_mailing',
+      'label' => 'To',
+      'widget_type' => 'relation_default',
+      'display' => array(
+        'default' => array(
+          'label' => 'hidden',
+          'type' => 'relation_default',
+        ),
+        'teaser' => array(
+          'label' => 'hidden',
+          'type' => 'hidden',
+        ),
+      ),
+    );
 
   // Create field instances if they don't exist
   foreach ($instances as $instance) {
-    $info_instance = field_info_instance('elobbyist_contact', $instance['field_name'], $instance['bundle']);
+    $info_instance = field_info_instance($instance['entity_type'], $instance['field_name'], $instance['bundle']);
     if (empty($info_instance)) {
       field_create_instance($instance);
     }
@@ -196,13 +237,49 @@ function elobbyist_fields_initialize() {
 /*
  * Disposes field instances
  */
-function elobbyist_fields_dispose() {
-   $additional_params = array('include_inactive' => TRUE);
-   
-   $instances = field_read_instances(array('entity_type' => 'elobbyist_contact'), $additional_params);
-   foreach ($instances as $instance) {
-     field_delete_field($instance['field_name']);
+function elobbyist_relations_dispose() {
+  // delete all the relationship_types and relations 
+  // mostly copied from crm_core_relationship module
+  $query = db_select('relation_bundles', 'rb')->
+           fields('rb', array('relation_type'))->
+           condition('rb.entity_type', 
+             array('elobbyist_contact', 
+                   'elobbyist_group',
+                   'elobbyist_mailing', 
+                   'elobbyist_activity'), 'IN')->
+           distinct()->
+           execute();
+
+   while ($record = $query->fetchAssoc()) {
+     $relationship_type[] = $record['relation_type'];
    }
+
+   foreach ($relationship_type as $type) {
+     // look into the database for each type
+     $relationship_query = db_select('relation', 'r')->
+           fields('r', array('rid'))->
+           condition('r.relation_type', $type)->
+           execute();
+
+     while ($result = $relationship_query->fetchAssoc()) {
+       // delete all the relationships of that type
+       relation_delete($result['rid']);
+     }
+     // finally delete the relationshp_type
+     relation_type_delete($type);
+   }
+}
+
+function elobbyist_fields_dispose() {
+   elobbyist_fields_delete_instances('elobbyist_contact');
+   elobbyist_fields_delete_instances('elobbyist_mailing');
+}
+
+function elobbyist_fields_delete_instances($entity_type) { 
+  $instances = field_read_instances(array('entity_type' => $entity_type), array('include_inactive' => TRUE));
+  foreach ($instances as $instance) {
+   field_delete_field($instance['field_name']);
+  }
 }
 
 function elobbyist_email_provider_get_schema() {
@@ -261,6 +338,13 @@ function elobbyist_group_get_schema() {
         'description' => 'The {contact_type} this group is confined to.',
         'type' => 'varchar',
         'length' => '32',
+        'not null' => TRUE,
+      ),
+      'status' => array(
+        'description' => 'group status: Active, Inactive.',
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
         'not null' => TRUE,
       ),
     ),
@@ -440,6 +524,11 @@ function elobbyist_mailing_get_schema() {
         'unsigned' => TRUE,
         'not null' => TRUE,
       ),
+      'page' => array(
+        'description' => 'content of the call to action page',
+        'type' => 'text',
+        'not null' => FALSE,
+      ),
       'start' => array(
         'description' => 'The Unix timestamp for scheduling start time.',
         'type' => 'int',
@@ -450,12 +539,7 @@ function elobbyist_mailing_get_schema() {
         'type' => 'int',
         'not null' => FALSE,
       ),
-      'time_part1' => array(
-        'description' => 'Every x time part. A time part (days, hours or minutes) for scheduling.',
-        'type' => 'int',
-        'not null' => FALSE,
-      ),
-      'time_part2' => array(
+      'time_part' => array(
         'description' => 'Every x time part. A time part (days, hours or minutes) for scheduling.',
         'type' => 'int',
         'not null' => FALSE,

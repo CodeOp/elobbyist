@@ -21,8 +21,6 @@ class ELobbyistActivityController extends DrupalDefaultEntityController {
       // Determine if we will be inserting a new record
       $entity->is_new = empty($entity->aid);
             
-      $update = TRUE;
-            
       // Give modules the opportunity to prepare field data for
       // saving.
       field_attach_presave('elobbyist_activity', $entity);

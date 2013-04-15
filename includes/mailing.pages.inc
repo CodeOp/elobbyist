@@ -1,2 +1,617 @@
 <?php
 
+/**
+ * @file
+ * Mailing entity pages callbacks
+ */
+
+/**
+ * form prepare callback
+ */
+function elobbyist_mailing_form($form, &$form_state, $entity) {
+  // Set the id to identify this as a record edit form.
+  $form['#id'] = 'elobbyist_mailing-form';
+  
+  // Save the record for later, in case we need it.
+  $form['#elobbyist_mailing'] = $entity;
+  $form_state['elobbyist_mailing'] = $entity;
+  
+  // Set fields
+  $form['name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Mailing Name'),
+    '#default_value' => $entity->name,
+    '#weight' => -5,
+    '#maxlength' => 100,
+    '#size' => 83,
+    '#required' => TRUE,
+    '#description' => t('This is also the title of the public call to action page, if exists'),
+  );
+
+  $form['tid'] = array(
+      '#type' => 'select',
+      '#key_type' => 'associative',
+      '#title' => t('Email Template'),
+      '#options' => elobbyist_get_templates($entity->tid),
+      '#default_value' => $entity->tid,
+      '#weight' => 0,
+      '#required' => TRUE,
+    );
+      
+  $form['status'] = array(
+    '#type' => 'select',
+    '#title' => t('Status'),
+    '#default_value' => $entity->status,
+    '#weight' => 5,
+    '#options' => elobbyist_mailing_status_list(),
+    '#required' => TRUE,
+  );
+  
+  $form['elobbyist_from'] = array(
+    '#type' => 'elobbyist_from',
+    '#relation_type' => 'elobbyist_from',
+    '#title' => t('From'),
+    '#weight' => 6,
+  );
+
+  $form['elobbyist_to'] = array(
+      '#type' => 'elobbyist_to',
+      '#relation_type' => 'elobbyist_to',
+      '#title' => t('To'),
+      '#weight' => 7,
+  );
+
+  $form['schedule'] = array(
+    '#type' => 'select',
+    '#title' => t('Schedule type'),
+    '#default_value' => $entity->schedule,
+    '#weight' => 10,
+    '#options' => elobbyist_mailing_schedule_type_list(),
+    '#required' => TRUE,
+  );
+  
+  $form['start'] = array(
+    '#type' => 'date_popup',
+    '#date_type' => DATE_UNIX,
+    '#date_format' => ELOBBYIST_DATE_FULL_FORMAT,
+    '#title' => t('Start Date'),
+    '#default_value' => format_date($entity->start, 'custom', ELOBBYIST_DATE_FULL_FORMAT),
+    '#date_year_range' => '-0:+' . ELOBBYIST_MAILING_SCHEDULE_MAX_YEARS,
+    '#weight' => 15,
+    '#required' => FALSE,
+    '#exclude_cv' => TRUE,
+  );
+  
+  $tmp = '';
+  if (!empty($entity->end)) {
+    $tmp = format_date($entity->end, 'custom', ELOBBYIST_DATE_FULL_FORMAT);
+  }
+  
+  $form['end'] = array(
+    '#type' => 'date_popup',
+    '#date_type' => DATE_UNIX,
+    '#date_format' => ELOBBYIST_DATE_FULL_FORMAT,
+    '#title' => t('End Date'),
+    '#default_value' => $tmp,
+    '#weight' => 20,
+    '#required' => FALSE,
+    '#description' => t('Effective only for an on-going schedule type'),
+    '#exclude_cv' => TRUE,
+  );
+  
+  $form['time_part'] = array(
+    '#type' => 'timeperiod_select',
+    '#title' => t('Run cron job every'),
+    '#default_value' => $entity->time_part,
+    '#weight' => 25,
+    '#required' => FALSE,
+    '#units' => array(
+        '86400' => array('max' => ELOBBYIST_MAILING_SCHEDULE_MAX_DAYS, 'step size' => 1),
+        '3600' => array('max' => 23, 'step size' => 1),
+        '60' => array('max' => 59, 'step size' => 1),
+      ),
+    '#description' => t('Effective only for an on-going schedule type'),
+  );
+  
+  //Add the buttons
+  $form['buttons'] = array();
+  $form['buttons']['#weight'] = 100;
+  $form['buttons']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save'),
+    '#weight' => 100,
+    '#submit' => array('elobbyist_mailing_form_submit'),
+  );
+  
+  if (!empty($entity->mid)) {
+    $form['buttons']['delete'] = array(
+      '#access' => user_access('delete email lobbyist mailings'),
+      '#type' => 'submit',
+      '#value' => t('Delete'),
+      '#weight' => 120,
+      '#submit' => array('elobbyist_mailing_form_delete_submit'),
+      '#limit_validation_errors' => array(),       // No validation.
+    );
+  }
+  
+  $form['#validate'][] = 'elobbyist_mailing_form_validate';
+  
+  field_attach_form('elobbyist_mailing', $entity, $form, $form_state);
+  
+  return $form;
+}
+
+function elobbyist_mailing_page_subscribe($form, &$form_state, $entity) {
+  
+}
+
+function elobbyist_mailing_page_form($form, &$form_state, $entity) {
+  
+}
+
+function elobbyist_mailing_status_list() {
+  return array(
+    ELOBBYIST_MAILING_STATUS_DRAFT => t('Draft'),
+    ELOBBYIST_MAILING_STATUS_ACTIVE => t('Active'),
+    ELOBBYIST_MAILING_STATUS_CLOSED => t('Closed'),
+    ELOBBYIST_MAILING_STATUS_CANCELLED => t('Cancelled'),
+  );
+}
+
+function elobbyist_mailing_schedule_type_list() {
+  return array(
+    ELOBBYIST_MAILING_SCHEDULE_ONE_TIME => t('One-time run'),
+    ELOBBYIST_MAILING_SCHEDULE_ON_GOING => t('On-going (public call to action)'),
+  );
+}
+
+/**
+ * Validate form
+ */
+function elobbyist_mailing_form_validate($form, &$form_state) {
+  $entity = $form_state['elobbyist_mailing'];
+  
+  $entity->name = $form_state['values']['name'];
+  $entity->tid = $form_state['values']['tid'];
+  $entity->schedule = $form_state['values']['schedule'];
+  $entity->status = $form_state['values']['status'];
+  $entity->time_part = $form_state['values']['time_part'];
+  $entity->pagenid = $form_state['values']['pagenid'];
+
+  if (!empty($form_state['values']['start'])) {
+    $entity->start = elobbyist_string_to_full_date($form_state['values']['start']);
+  }
+  
+  //for one-time task always set end date to start date
+  if ($entity->schedule == ELOBBYIST_MAILING_SCHEDULE_ONE_TIME) {
+    $entity->end = $entity->start;
+  }
+  else { //on going task    
+    if (!empty($form_state['values']['end'])) {
+      $entity->end = elobbyist_string_to_full_date($form_state['values']['end']);
+    
+      if ($entity->end < ($entity->start + $entity->time_part)) {
+        form_set_error('end', t('End date must be greater than or equal to Start date + "Run cron job every".'));
+      }
+    }
+    else {
+      form_set_error('end', t('End date must be set for an on-going schedule type.'));
+    }
+  }
+  
+  $form_state['elobbyist_mailing'] = $entity;
+  
+  //do not allow saving as active if to and from are not filled
+  if ($entity->status == ELOBBYIST_MAILING_STATUS_ACTIVE) {
+    if (!elobbyist_groups_field_has_value('elobbyist_from', 'elobbyist_mailing', $form, $form_state)) {
+      form_set_error('elobbyist_from', t('An active mailing requires filling senders (From).'));
+    }
+    if (!elobbyist_groups_field_has_value('elobbyist_to', 'elobbyist_mailing', $form, $form_state)) {
+      form_set_error('elobbyist_to', t('An active mailing requires filling recipients (To).'));
+    }
+  }
+  
+  //Field validation
+  field_attach_form_validate('elobbyist_mailing', $entity, $form, $form_state);
+}
+
+/**
+ * Save functions
+ */
+function elobbyist_mailing_form_submit($form, &$form_state) {
+  global $user;
+  
+  $entity = $form_state['elobbyist_mailing'];
+  
+  // Notify field widgets.
+  field_attach_submit('elobbyist_mailing', $entity, $form, $form_state);
+  
+  $new_record = empty($entity->mid);
+  
+  //create a page, if required, and save its id to the saved record's pagenid
+  /*if ( empty($entity->pagenid) &&
+       ( $entity->status == ELOBBYIST_MAILING_STATUS_ACTIVE ||
+         $entity->status == ELOBBYIST_MAILING_STATUS_DRAFT) && 
+         $entity->schedule = ELOBBYIST_MAILING_SCHEDULE_ON_GOING
+    ) {
+    if (user_access('create page content')) {
+      $entity->pagenid = elobbyist_mailing_page_create($entity);
+      if (!empty($entity->pagenid)) {
+        drupal_set_message(t('A new page was created successfully.'), 'status');
+      }
+    }
+    else {
+      //notify, the user has no permission to create pages
+      drupal_set_message(t('A new page was not created, because you do not have a permission to create pages'), 'warning');
+    }
+  }*/
+  
+  // Save the record.
+  $entity = elobbyist_mailing_save($entity);
+  
+  //if new record, call submit from and to manually, because it needs the entity id
+  if ($new_record) {
+    elobbyist_field_attach_submit('elobbyist_mailing', $entity, $form, $form_state);
+  }
+
+  
+  // Notify the user.
+  if ($entity) {
+    drupal_set_message(t('Mailing saved.'));
+    
+    //notify when cron job settings filled on one-time job
+    if ($entity->schedule == ELOBBYIST_MAILING_SCHEDULE_ONE_TIME) {
+        if ($entity->time_part > 0) {
+          drupal_set_message(t('The "Run cron job every" field is filled, while it is only effective for an on-going schedule type'), 'warning');
+        }
+    }
+    
+    if ($entity->status == ELOBBYIST_MAILING_STATUS_ACTIVE) {
+      if ($entity->end < REQUEST_TIME) {
+        drupal_set_message(t('As long as this mailing dates are in the past it won\'t run.'), 'warning');
+      }
+    }
+    
+    if ($new_record) {
+      $form_state['redirect'] = 'elobbyist/mailing/' . $entity->mid . '/edit';
+    }
+  }
+}
+
+function elobbyist_mailing_save($entity) {
+  return entity_get_controller('elobbyist_mailing')->save($entity);
+}
+
+/*
+ * Delete functions
+ */
+function elobbyist_mailing_delete_confirm($form, &$form_state, $entity) {
+  $form['#elobbyist_mailing'] = $entity;
+  
+  $form['mid'] = array('#type' => 'value', '#value' => $entity->mid);
+  return confirm_form($form, 
+    t('Are you sure you want to delete %title?',
+      array('%title' => $entity->name)),
+    'elobbyist/mailings',
+    t('This action cannot be undone'),
+    t('Delete'), 
+    t('Cancel')
+  );
+}
+function elobbyist_mailing_form_delete_submit($form, &$form_state) {
+  $destination = array();
+  if (isset($_GET['destination'])) {
+    $destination = drupal_get_destination();
+    unset($_GET['destination']);
+  }
+  
+  $entity = $form['#elobbyist_mailing'];
+  $form_state['redirect'] = array('elobbyist/mailing/' . $entity->mid . '/delete',
+    array('query' => $destination));
+}
+
+function elobbyist_mailing_delete_confirm_submit($form, &$form_state) {
+  if ($form_state['values']['confirm']) {
+    $entity = elobbyist_mailing_load($form_state['values']['mid']);
+    elobbyist_mailing_delete($form_state['values']['mid']);
+    watchdog('elobbyist_mailing', 'mailing deleted %title.' , 
+      array('%title' => $entity->name) );
+    
+    drupal_set_message(t('Mailing %title has been deleted.', array(
+      '%title' => $entity->name)
+      )
+    );
+  }
+  
+  $form_state['redirect'] = 'elobbyist/mailings';
+}
+
+function elobbyist_mailing_page_title($entity) {
+  drupal_set_title(t('Mailing: @title', array(
+    '@title' => $entity->name, )), PASS_THROUGH);
+}
+
+function elobbyist_mailing_page_view($entity, $view_mode = 'full') {
+  elobbyist_mailing_page_title($entity);
+  
+  // Remove previously built content, if exists.
+  $entity->content = array();
+  
+  $entity->content['#attached']['css'] = array(
+    drupal_get_path('module', 'elobbyist') . '/includes/elobbyist.css',
+  );
+
+  if (!empty($entity->tid)) {
+    $tmp = entity_load('elobbyist_template', array($entity->tid));
+      
+    if ($tmp != null && is_array($tmp)) {
+      $entity->content['tid'] = array(
+        '#markup' => theme('elobbyist_field',
+            array(
+              'title' => t('Template'),
+              'item' => l(filter_xss(current($tmp)->name), 'elobbyist/template/' . $entity->tid . '/edit'),
+            )
+         ),
+        '#weight' => -45,
+      );
+    }
+  }
+
+  if (!empty($entity->status)) {
+    $statuses = elobbyist_mailing_status_list();
+    $entity->content['status'] = array(
+      '#markup' => theme('elobbyist_field',
+          array(
+            'title' => t('Status'),
+            'item' => $statuses[$entity->status],
+          )
+       ),
+      '#weight' => -30,
+    );
+  }
+
+  $form['schedule'] = array(
+    '#type' => 'select',
+    '#title' => t('Schedule type'),
+    '#default_value' => $entity->schedule,
+    '#weight' => 10,
+    '#options' => elobbyist_mailing_schedule_type_list(),
+    '#required' => TRUE,
+  );
+  
+  $entity->content['start'] = array(
+    '#markup' => theme('elobbyist_field',
+          array(
+            'title' => t('Start Date'),
+            'item' => format_date($entity->start, 'custom', ELOBBYIST_DATE_FULL_FORMAT),
+          )
+       ),
+      '#weight' => -16,
+  );
+  
+  $entity->content['end'] = array(
+    '#markup' => theme('elobbyist_field',
+          array(
+            'title' => t('End Date'),
+            'item' => format_date($entity->end, 'custom', ELOBBYIST_DATE_FULL_FORMAT),
+          )
+       ),
+      '#weight' => -16,
+  );
+
+  $form['time_part'] = array(
+    '#type' => 'timeperiod_default',
+    '#title' => t('Run cron job every'),
+    '#default_value' => $entity->time_part,
+    '#weight' => 25,
+    '#required' => FALSE,
+  );
+  
+  $entity->content['created'] = array(
+    '#markup' => theme('elobbyist_field',
+          array(
+            'title' => t('Created on'),
+            'item' => format_date($entity->created, 'custom', ELOBBYIST_DATE_FULL_FORMAT),
+          )
+       ),
+      '#weight' => -16,
+  );
+  
+  $entity->content['changed'] = array(
+    '#markup' => theme('elobbyist_field',
+          array(
+            'title' => t('Modified on'),
+            'item' => format_date($entity->changed, 'custom', ELOBBYIST_DATE_FULL_FORMAT),
+          )
+       ),
+      '#weight' => -15,
+  );
+  
+  // Build fields content.
+  field_attach_prepare_view('elobbyist_mailing', 
+    array($entity->mid => $entity), $view_mode);
+  
+  entity_prepare_view('elobbyist_mailing', array($entity->mid => $entity));
+  
+  $entity->content += field_attach_view('elobbyist_mailing', $entity, $view_mode);
+  
+  return $entity->content;
+}
+
+/*
+ * Build the call-to-action public page
+ * 
+ * For the page to be displayed - a mailing must be active, of schedule type on-going and start date has past
+ * If not displayed: a general "Oops! the page you requested cannot be found." message is to be shown
+ * 
+ * For the page to receive subscribers, end date has yet to pass, taking into account also a setting of X minutes/hours even before end date
+ */
+function elobbyist_mailing_action_page($entity) {
+  elobbyist_mailing_page_title($entity);
+  
+  //return drupal_get_form('elobbyist_mailing_page_subscribe', $entity);
+}
+
+/*
+ * Edit the mailing page field - only if mailing is of schedule type 'on-going' and status active or draft
+ * On one-time schedule: display message. On closed/cancelled: show the content without editing
+ */
+function elobbyist_mailing_action_page_edit($entity) {
+  elobbyist_mailing_page_title($entity);
+  
+  return drupal_get_form('elobbyist_mailing_page_form', $entity);
+}
+
+/*
+ * Add record page callback
+ */
+function elobbyist_mailing_add() { 
+  $entity = entity_get_controller('elobbyist_mailing')->create();
+  
+  drupal_set_title(t('New Mailing'), PASS_THROUGH);
+  
+  return drupal_get_form('elobbyist_mailing_form', $entity);
+}
+
+/*
+ * Edit record page callback
+ */
+function elobbyist_mailing_page_edit($entity) {
+  elobbyist_mailing_page_title($entity);
+  
+  return drupal_get_form('elobbyist_mailing_form', $entity);
+}
+
+/*
+ * list mailings
+ */
+function elobbyist_mailing_grid() {
+  //Create a list of headers for sorting
+	$header = array( 
+    array('data' => t('Mailing Name'), 'field' => 'name', 'sort' => 'asc'),
+    array('data' => t('Template'), 'field' => 'tname', 'sort' => 'asc'),
+    array('data' => t('Status'), 'field' => 'status', 'sort' => 'asc'),
+    array('data' => t('Schedule'), 'field' => 'schedule', 'sort' => 'asc'),
+    array('data' => t('Start'), 'field' => 'start', 'sort' => 'desc'),
+    array('data' => t('End'), 'field' => 'end', 'sort' => 'desc'),
+    array('data' => ''),
+  );
+  
+  $statuses = elobbyist_mailing_status_list();
+  
+  $schedule_types = elobbyist_mailing_schedule_type_list();
+  
+	//Create the Sql query
+	$query = db_select('elobbyist_mailing', 'p');
+  
+  $query->join('elobbyist_template', 't', 'p.tid = t.tid');
+  
+  $query->extend('PagerDefault') 	//Pager Extender
+					->limit(variable_get('elobbyist_records_per_page', ELOBBYIST_DEFAULT_RECORDS_PER_PAGE))				//results per page
+				->extend('TableSort')		//Sorting Extender
+					->orderByHeader($header)//Field to sort on is picked from $header
+				->fields ('p', array (
+                'mid',
+                'tid',
+                'name',
+                'status',
+                'schedule',
+                'start', 
+                'end',
+              )
+          )
+      ->addField ('t', 'name', 'tname');
+  
+	$results = $query->execute();
+
+  //go through resultset
+	$rows = array();	
+	foreach ($results as $row) {
+		$rows[] = array(
+					'data' => array(
+						  l($row->name, 'elobbyist/mailing/'. $row->mid .'/edit'),
+              l($row->tname, 'elobbyist/template/'. $row->tid .'/edit'),
+						  $statuses[$row->status],
+              $schedule_types[$row->schedule],
+              format_date($row->start, 'custom', 'Y-m-d'),
+              format_date($row->end, 'custom', 'Y-m-d'),
+              l(t('Edit'), 'elobbyist/mailing/'. $row->mid .'/edit'). '&nbsp;&nbsp;' .
+              l(t('Delete'), 'elobbyist/mailing/'. $row->mid .'/delete'),
+					)
+		);
+	}
+  	
+	//Theme the html table
+	$html = l(t('Add new mailing'), 'elobbyist/mailings/add') .
+     theme('table', 
+				array(
+					'header' => $header,
+					'rows'=>$rows,
+					'sticky' => TRUE,
+					'empty' => t('No records.'),
+				)
+			);
+	
+	//Append pager
+	$html .= theme('pager',
+				array(
+					'tags' => array()
+				)
+			);
+			
+	return ($html);
+}
+
+/*
+ * Pull a list of templates from the database
+ */
+function elobbyist_get_templates($current) {
+  $result = db_select('elobbyist_template', 't')
+          ->fields('t', array('tid', 'name'))
+          ->condition('status', ELOBBYIST_TEMPLATE_STATUS_ACTIVE)
+          ->orderBy('t.name', 'ASC')
+          ->execute();
+
+  if (!empty($current))
+  {
+    $arr = $result->fetchAllKeyed();
+    //if current option is not in list, add it
+    if (!isset($arr[$current])) {
+      $tmp = entity_load('elobbyist_template', array($current));
+      if ($tmp != null) {
+        $t_obj = current($tmp);
+        $arr[$t_obj->tid] = $t_obj->name;
+      }
+    }
+    
+    return $arr;
+  }
+  
+  return $result->fetchAllKeyed();
+}
+
+/*
+ * 
+ * original code - form http://drupal.org/node/1388922
+ */
+function elobbyist_mailing_page_create($mailing) {
+  global $user;
+  
+  $values = array(
+    'type' => 'page',
+    'uid' => $user->uid,
+    'status' => 0, //1 - published
+    'comment' => 1, //2 = comments on, 1 = comments off
+    'promote' => 0, //1 - promoted
+  );
+  $entity = entity_create('node', $values);
+  $ewrapper = entity_metadata_wrapper('node', $entity);
+  $ewrapper->title->set($mailing->name);
+  
+  $template = entity_load('elobbyist_template', array($mailing->tid));
+  
+  $my_body_content = t('<p>Please consider sending the following letter:</p><br/>') . $template->body;
+  $ewrapper->body->set(array('value' => $my_body_content));
+  $ewrapper->save(true);
+  entity_save('node', $entity);
+}

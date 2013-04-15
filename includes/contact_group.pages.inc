@@ -29,6 +29,16 @@ function elobbyist_group_form($form, &$form_state, $entity) {
     '#required' => TRUE,
   );
   
+  $form['status'] = array(
+    '#type' => 'select',
+    '#title' => t('Status'),
+    '#default_value' => $entity->status,
+    '#weight' => 5,
+    '#options' => elobbyist_group_status_list(),
+    '#required' => TRUE,
+    '#description' => t('Incative groups do not send or receive emails and cannot be selected, but preserve their current relations'),
+  );
+  
   //Add the buttons
   $form['buttons'] = array();
   $form['buttons']['#weight'] = 100;
@@ -55,6 +65,13 @@ function elobbyist_group_form($form, &$form_state, $entity) {
   field_attach_form('elobbyist_group', $entity, $form, $form_state);
   
   return $form;
+}
+
+function elobbyist_group_status_list() {
+  return array(
+    ELOBBYIST_GROUP_STATUS_ACTIVE => t('Active'),
+    ELOBBYIST_GROUP_STATUS_INACTIVE => t('Inactive'),
+  );
 }
 
 /*
@@ -93,7 +110,20 @@ function elobbyist_group_page_view($entity, $view_mode = 'full') {
   $entity->content['#attached']['css'] = array(
     drupal_get_path('module', 'elobbyist') . '/includes/elobbyist.css',
   );
-    
+  
+  if (!empty($entity->status)) {
+    $statuses = elobbyist_group_status_list();
+    $entity->content['status'] = array(
+      '#markup' => theme('elobbyist_field',
+          array(
+            'title' => t('Status'),
+            'item' => $statuses[$entity->status],
+          )
+       ),
+      '#weight' => -30,
+    );
+  }
+
   // Build fields content.
   field_attach_prepare_view('elobbyist_group', 
     array($entity->grpid => $entity), $view_mode);
@@ -131,7 +161,8 @@ function elobbyist_group_form_submit($form, &$form_state) {
   $entity = $form_state['elobbyist_group'];
   
   $entity->name = $form_state['values']['name'];
-        
+  $entity->status = $form_state['values']['status'];
+
   // Notify field widgets.
   field_attach_submit('elobbyist_group', $entity, $form, $form_state);
   
@@ -228,9 +259,15 @@ function elobbyist_group_delete_confirm_submit($form, &$form_state) {
 function elobbyist_contacts_groups_grid($type) {
  
   //Create a list of headers for sorting
-	$header = array( array('data' => t('Group Name'), 'field' => 'name', 'sort' => 'asc')	);
+	$header = array( 
+    array('data' => t('Group Name'), 'field' => 'name', 'sort' => 'asc'),
+    array('data' => t('Status'), 'field' => 'status', 'sort' => 'asc'),
+    array('data' => ''),
+  );
   
   $types = elobbyist_group_types();
+  
+  $statuses = elobbyist_group_status_list();
   
   //change default "Groups" title provided by menu
   drupal_set_title($types[$type]->plural);
@@ -245,15 +282,13 @@ function elobbyist_contacts_groups_grid($type) {
       $rows[] = array(
             'data' => array(
                 l($row->name, 'elobbyist/contact-group/'. $row->grpid .'/edit'),
+                $statuses[$row->status],
                 l(t('Edit'), 'elobbyist/contact-group/'. $row->grpid .'/edit') . '&nbsp;&nbsp;' .
                 l(t('Delete'), 'elobbyist/contact-group/'. $row->grpid .'/delete'),
             )
       );
     }
   }
-  
-  //Complete list of headers for theming
-  $header[] = array('data' => '');
 	
 	//Theme the html table
 	$html = l(t('Add new group'), 'elobbyist/' . $type . '/groups/add') .
@@ -284,8 +319,8 @@ function elobbyist_group_contacts_grid($entity) {
  
   //Create a list of headers for sorting
 	$header = array( 
-              array('data' => t('Full Name'), 'field' => 'name')	,
-              array('data' => t('Email'), 'field' => 'email'),
+              array('data' => t('Full Name'), 'field' => 'name', 'sort' => 'asc')	,
+              array('data' => t('Email'), 'field' => 'email', 'sort' => 'asc'),
               array('data' => '') 
   );
   
@@ -347,6 +382,7 @@ function elobbyist_contacts_groups_grid_data($type, &$header) {
   $query = $query->fields ('cg', array (
                 'grpid',
                 'name',
+                'status',
               )
           );
   	

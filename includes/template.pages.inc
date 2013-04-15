@@ -85,18 +85,12 @@ function elobbyist_template_form($form, &$form_state, $entity) {
 }
 
 function elobbyist_template_status_list() {
-  //first check cache for data
-  $statuses = &drupal_static(__FUNCTION__);
-  
-  if (!empty($statuses)) 
-    return $statuses;
-
-  $statuses[ELOBBYIST_TEMPLATE_STATUS_DRAFT] = t('Draft');
-  $statuses[ELOBBYIST_TEMPLATE_STATUS_ACTIVE] = t('Active');
-  $statuses[ELOBBYIST_TEMPLATE_STATUS_CLOSED] = t('Closed');
-  $statuses[ELOBBYIST_TEMPLATE_STATUS_CANCELLED] = t('Cancelled');
-    
-  return $statuses;
+  return array(
+    ELOBBYIST_TEMPLATE_STATUS_DRAFT => t('Draft'),
+    ELOBBYIST_TEMPLATE_STATUS_ACTIVE => t('Active'),
+    ELOBBYIST_TEMPLATE_STATUS_CLOSED => t('Closed'),
+    ELOBBYIST_TEMPLATE_STATUS_CANCELLED => t('Cancelled'),
+  );
 }
 
 /**
@@ -194,7 +188,12 @@ function elobbyist_template_delete_confirm_submit($form, &$form_state) {
  */
 function elobbyist_template_grid() {
   //Create a list of headers for sorting
-	$header = array( array('data' => t('Template Name'), 'field' => 'name', 'sort' => 'asc')	);
+	$header = array( 
+    array('data' => t('Template Name'), 'field' => 'name', 'sort' => 'asc'),
+    array('data' => t('Subject'), 'field' => 'subject', 'sort' => 'asc'),
+    array('data' => t('Status'), 'field' => 'status', 'sort' => 'asc'),
+    array('data' => ''),
+  );
   
   $statuses = elobbyist_template_status_list();
 
@@ -227,11 +226,6 @@ function elobbyist_template_grid() {
 					)
 		);
 	}
-  
-  //Complete list of headers for theming
-  $header[] = array('data' => t('Subject'), 'field' => 'subject');
-  $header[] = array('data' => t('Status'), 'field' => 'status');
-  $header[] = array('data' => '');
 	
 	//Theme the html table
 	$html = l(t('Add new template'), 'elobbyist/templates/add') .

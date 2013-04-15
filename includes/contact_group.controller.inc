@@ -6,6 +6,7 @@ class ELobbyistContactGroupController extends DrupalDefaultEntityController {
     return (object)array(
       'grpid' => '',
       'name' => '',
+      'status' => ELOBBYIST_GROUP_STATUS_ACTIVE,
       'type' => $type,
     );
   }
@@ -18,8 +19,6 @@ class ELobbyistContactGroupController extends DrupalDefaultEntityController {
       
       // Determine if we will be inserting a new record
       $entity->is_new = empty($entity->grpid);
-            
-      $update = TRUE;
             
       // Give modules the opportunity to prepare field data for
       // saving.

@@ -168,7 +168,12 @@ function elobbyist_email_provider_delete_confirm_submit($form, &$form_state) {
  */
 function elobbyist_email_provider_grid() {
   //Create a list of headers for sorting
-	$header = array( array('data' => t('Provider Name'), 'field' => 'name', 'sort' => 'asc')	);
+	$header = array( 
+    array('data' => t('Provider Name'), 'field' => 'name', 'sort' => 'asc'),
+    array('data' => t('SMTP Server'), 'field' => 'smtphost', 'sort' => 'asc'),
+    array('data' => t('Port'), 'field' => 'smtpport', 'sort' => 'asc'),
+    array('data' => ''),
+  );
 
 	//Create the Sql query
 	$query = db_select('elobbyist_email_provider', 'p')
@@ -199,12 +204,7 @@ function elobbyist_email_provider_grid() {
 					)
 		);
 	}
-  
-  //Complete list of headers for theming
-  $header[] = array('data' => t('SMTP Server'), 'field' => 'smtphost');
-  $header[] = array('data' => t('Port'), 'field' => 'smtpport');
-  $header[] = array('data' => '');
-	
+  	
 	//Theme the html table
 	$html = l(t('Add new email provider'), 'elobbyist/email-providers/add') .
      theme('table', 

@@ -44,8 +44,6 @@ class ELobbyistContactController extends DrupalDefaultEntityController {
       }
       
       $contact->changed = REQUEST_TIME;
-      
-      $update = TRUE;
             
       // Give modules the opportunity to prepare field data for
       // saving.

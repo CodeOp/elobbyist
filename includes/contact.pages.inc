@@ -86,6 +86,7 @@ function elobbyist_contact_form($form, &$form_state, $contact) {
       '#relation_type' => 'elobbyist_' . $contact->type,
       '#title' => t('Groups'),
       '#weight' => 40,
+      '#description' => t('Emails are sent only between groups.'),
   );
   
   //Add the buttons
@@ -162,6 +163,11 @@ function elobbyist_contact_form_submit($form, &$form_state) {
   
   // Save the contact.
   $contact = elobbyist_contact_save($contact);
+  
+  //if new record, call submit groups manually, because it needs the entity id
+  if ($new_record) {
+    elobbyist_field_attach_submit('elobbyist_contact', $contact, $form, $form_state);
+  }
   
   $types = elobbyist_contact_types();
   
@@ -294,19 +300,19 @@ function elobbyist_contact_page_view($entity, $view_mode = 'full') {
   
   if ($entity->type == 'subscriber') {
     if (!empty($entity->providerid)) {
-      //since the list of providers is cached and not so long, 
-      //it's ok to pull it for getting the coresponding provider name of a specific record
-      $providers = elobbyist_get_email_providers();
-
-      $entity->content['providerid'] = array(
-        '#markup' => theme('elobbyist_field',
-            array(
-              'title' => t('Provider'),
-              'item' => filter_xss($providers[$entity->providerid]),
-            )
-         ),
-        '#weight' => -45,
-      );
+      $provider = entity_load('elobbyist_email_provider', array($entity->providerid));
+      
+      if ($provider != null && is_array($provider)) {
+        $entity->content['providerid'] = array(
+          '#markup' => theme('elobbyist_field',
+              array(
+                'title' => t('Provider'),
+                'item' => filter_xss(current($provider)->name),
+              )
+           ),
+          '#weight' => -45,
+        );
+      }
     }
   
     $entity->content['notify'] = array(
@@ -333,11 +339,13 @@ function elobbyist_contact_page_view($entity, $view_mode = 'full') {
     }
   }
   
+  $format_short_date = variable_get('date_format_short', 'Y-n-j - H:i');
+  
   $entity->content['created'] = array(
     '#markup' => theme('elobbyist_field',
           array(
             'title' => t('Created on'),
-            'item' => format_date($entity->created),
+            'item' => format_date($entity->created, 'custom', $format_short_date),
           )
        ),
       '#weight' => -16,
@@ -347,7 +355,7 @@ function elobbyist_contact_page_view($entity, $view_mode = 'full') {
     '#markup' => theme('elobbyist_field',
           array(
             'title' => t('Modified on'),
-            'item' => format_date($entity->changed),
+            'item' => format_date($entity->changed, 'custom', $format_short_date),
           )
        ),
       '#weight' => -15,
@@ -450,7 +458,13 @@ function elobbyist_get_email_providers() {
 function elobbyist_subscribers_grid() {
  
   //Create a list of headers for sorting
-	$header = array( array('data' => t('Full Name'), 'field' => 'name', 'sort' => 'asc')	);
+	$header = array( 
+    array('data' => t('Full Name'), 'field' => 'name', 'sort' => 'asc'),
+    array('data' => t('Email'), 'field' => 'email', 'sort' => 'asc'),
+    array('data' => t('Provider'), 'field' => 'provider_name', 'sort' => 'asc'),
+    array('data' => t('Subscription'), 'field' => 'stype', 'sort' => 'asc'),
+    array('data' => ''),
+  );
   
   $subscriber_types = elobbyist_subscriber_types();
 
@@ -473,12 +487,6 @@ function elobbyist_subscribers_grid() {
       );
     }
   }
-  
-  //Complete list of headers for theming
-  $header[] = array('data' => t('Email'), 'field' => 'email');
-  $header[] = array('data' => t('Provider'), 'field' => 'provider_name');
-  $header[] = array('data' => t('Subscription'), 'field' => 'stype');
-  $header[] = array('data' => '');
 	
 	//Theme the html table
 	$html = l(t('Add new subscriber'), 'elobbyist/subscribers/add/subscriber') .
@@ -506,7 +514,11 @@ function elobbyist_subscribers_grid() {
  */
 function elobbyist_recipients_grid() {
   //Create a list of headers for sorting
-	$header = array( array('data' => t('Full Name'), 'field' => 'name', 'sort' => 'asc')	);
+	$header = array( 
+    array('data' => t('Full Name'), 'field' => 'name', 'sort' => 'asc'),
+    array('data' => t('Email'), 'field' => 'email', 'sort' => 'asc'),
+    array('data' => ''),
+  );
   
 	$results = elobbyist_contacts_grid_data('recipient', $header);
 
@@ -524,11 +536,7 @@ function elobbyist_recipients_grid() {
       );
     }
   }
-  
-  //Complete list of headers for theming
-  $header[] = array('data' => t('Email'), 'field' => 'email');
-  $header[] = array('data' => '');
-	
+  	
 	//Theme the html table
 	$html = l(t('Add new recipient'), 'elobbyist/recipients/add/recipient') .
     theme('table', 

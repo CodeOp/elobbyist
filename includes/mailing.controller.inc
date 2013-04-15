@@ -8,11 +8,11 @@ class ELobbyistMailingController extends DrupalDefaultEntityController {
       'name' => '',
       'tid' => '',
       'schedule' => '',
-      'status' => '',
-      'start' => '',
+      'status' => ELOBBYIST_MAILING_STATUS_DRAFT,
+      'pagenid' => '',
+      'start' => REQUEST_TIME,
       'end' => '',
-      'time_part1' => '',
-      'time_part2' => '',
+      'time_part' => '',
     );
   }
   
@@ -24,8 +24,13 @@ class ELobbyistMailingController extends DrupalDefaultEntityController {
       
       // Determine if we will be inserting a new record
       $entity->is_new = empty($entity->mid);
-            
-      $update = TRUE;
+      
+      // Set the timestamp fields.
+      if (empty($entity->created)) {
+        $entity->created = REQUEST_TIME;
+      }
+      
+      $entity->changed = REQUEST_TIME;
             
       // Give modules the opportunity to prepare field data for
       // saving.
