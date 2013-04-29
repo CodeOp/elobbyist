@@ -389,8 +389,7 @@ function elobbyist_mailing_delete_confirm_submit($form, &$form_state) {
 }
 
 function elobbyist_mailing_page_title($entity) {
-  drupal_set_title(t('Mailing: @title', array(
-    '@title' => $entity->name, )), PASS_THROUGH);
+  drupal_set_title($entity->name, PASS_THROUGH);
 }
 
 function elobbyist_mailing_page_view($entity, $view_mode = 'full') {
