@@ -321,8 +321,20 @@ function elobbyist_group_contacts_grid($entity) {
 	$header = array( 
               array('data' => t('Full Name'), 'field' => 'name', 'sort' => 'asc')	,
               array('data' => t('Email'), 'field' => 'email', 'sort' => 'asc'),
-              array('data' => '') 
   );
+      
+  $subscriber_types = null;
+  $email_statuses = null;
+  if ($entity->type == 'subscribers') {
+    $header[] = array('data' => t('Status'), 'field' => 'bounce', 'sort' => 'asc');
+    $header[] = array('data' => t('Subscription'), 'field' => 'stype', 'sort' => 'asc');
+    
+    $subscriber_types = elobbyist_subscriber_types();
+    $email_statuses = elobbyist_email_statuses();
+  }
+  
+  $header[] = array('data' => '');
+  
   
   elobbyist_group_page_title($entity);
 
@@ -331,14 +343,31 @@ function elobbyist_group_contacts_grid($entity) {
 
   $rows = array();
   if ($results) {
-    foreach ($results as $row) {
-      $rows[] = array(
-            'data' => array(
-                l($row->name, 'elobbyist/contact/'. $row->cid .'/edit'),
-                $row->email,
-                l(t('Edit'), 'elobbyist/contact/'. $row->cid .'/edit'),
-            )
-      );
+    //subscribers
+    if (isset($subscriber_types)) {
+      foreach ($results as $row) {
+        $rows[] = array(
+              'data' => array(
+                  l($row->name, 'elobbyist/contact/'. $row->cid .'/edit'),
+                  $row->email,
+                  !isset($row->bounce) ? '' : $email_statuses[$row->bounce],
+                  empty($row->stype) ? '' : $subscriber_types[$row->stype],
+                  l(t('Edit'), 'elobbyist/contact/'. $row->cid .'/edit'),
+              )
+        );
+      }
+    }
+    //recipients
+    else {
+      foreach ($results as $row) {
+        $rows[] = array(
+              'data' => array(
+                  l($row->name, 'elobbyist/contact/'. $row->cid .'/edit'),
+                  $row->email,
+                  l(t('Edit'), 'elobbyist/contact/'. $row->cid .'/edit'),
+              )
+        );
+      }
     }
   }
 	

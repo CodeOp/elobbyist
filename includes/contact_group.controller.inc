@@ -4,8 +4,8 @@ class ELobbyistContactGroupController extends DrupalDefaultEntityController {
   
   public function create($type) {
     return (object)array(
-      'grpid' => '',
-      'name' => '',
+      'grpid' => NULL,
+      'name' => NULL,
       'status' => ELOBBYIST_GROUP_STATUS_ACTIVE,
       'type' => $type,
     );
@@ -79,6 +79,9 @@ class ELobbyistContactGroupController extends DrupalDefaultEntityController {
 
         module_invoke_all('entity_delete', $entity, 'elobbyist_group');
       }
+      
+      //unset foreign key of mailing addtogrpid
+      elobbyist_foreign_key_cascade_unset('elobbyist_mailing', 'addtogrpid', $ids);
 
       db_ignore_slave();
     }

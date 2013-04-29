@@ -4,10 +4,10 @@ class ELobbyistTemplateController extends DrupalDefaultEntityController {
   
   public function create() {
     return (object)array(
-      'tid' => '',
-      'name' => '',
-      'subject' => '',
-      'body' => '',
+      'tid' => NULL,
+      'name' => NULL,
+      'subject' => NULL,
+      'body' => NULL,
       'status' => ELOBBYIST_TEMPLATE_STATUS_DRAFT,
     );
   }
@@ -80,6 +80,8 @@ class ELobbyistTemplateController extends DrupalDefaultEntityController {
 
         module_invoke_all('entity_delete', $entity, 'elobbyist_template');
       }
+      
+      elobbyist_foreign_key_cascade_unset('elobbyist_activity', 'tid', $ids);
 
       db_ignore_slave();
     }

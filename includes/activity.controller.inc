@@ -4,11 +4,11 @@ class ELobbyistActivityController extends DrupalDefaultEntityController {
   
   public function create() {
     return (object)array(
-      'aid' => '',
-      'mid' => '',
-      'tid' => '',
-      'from' => '',
-      'to' => '',
+      'aid' => NULL,
+      'mid' => NULL,
+      'tid' => NULL,
+      'fromcid' => NULL,
+      'tocid' => NULL,
     );
   }
   
@@ -20,7 +20,12 @@ class ELobbyistActivityController extends DrupalDefaultEntityController {
       
       // Determine if we will be inserting a new record
       $entity->is_new = empty($entity->aid);
-            
+      
+      // Set the timestamp fields.
+      if (empty($entity->created)) {
+        $entity->created = REQUEST_TIME;
+      }
+
       // Give modules the opportunity to prepare field data for
       // saving.
       field_attach_presave('elobbyist_activity', $entity);

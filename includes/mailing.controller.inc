@@ -4,15 +4,16 @@
 class ELobbyistMailingController extends DrupalDefaultEntityController {
   public function create() {
     return (object)array(
-      'mid' => '',
-      'name' => '',
-      'tid' => '',
-      'schedule' => '',
+      'mid' => NULL,
+      'name' => NULL,
+      'tid' => NULL,
+      'schedule' => ELOBBYIST_MAILING_SCHEDULE_SIMPLE,
       'status' => ELOBBYIST_MAILING_STATUS_DRAFT,
-      'pagenid' => '',
+      'page' => NULL,
       'start' => REQUEST_TIME,
-      'end' => '',
-      'time_part' => '',
+      'end' => NULL,
+      'successurl' => NULL,
+      'addtogrpid' => NULL
     );
   }
   
@@ -91,6 +92,9 @@ class ELobbyistMailingController extends DrupalDefaultEntityController {
 
         module_invoke_all('entity_delete', $entity, 'elobbyist_mailing');
       }
+      
+      elobbyist_foreign_key_cascade_unset('elobbyist_contact', 'mid', $ids);
+      elobbyist_foreign_key_cascade_delete('elobbyist_activity', 'mid', 'aid', $ids);
 
       db_ignore_slave();
     }

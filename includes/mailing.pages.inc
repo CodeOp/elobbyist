@@ -32,7 +32,7 @@ function elobbyist_mailing_form($form, &$form_state, $entity) {
       '#type' => 'select',
       '#key_type' => 'associative',
       '#title' => t('Email Template'),
-      '#options' => elobbyist_get_templates($entity->tid),
+      '#options' => array('' => '') + elobbyist_get_templates($entity->tid),
       '#default_value' => $entity->tid,
       '#weight' => 0,
       '#required' => TRUE,
@@ -52,6 +52,7 @@ function elobbyist_mailing_form($form, &$form_state, $entity) {
     '#relation_type' => 'elobbyist_from',
     '#title' => t('From'),
     '#weight' => 6,
+    '#description' => t('Required for a simple run mailing. Optional for an on-going one. Only persistent subscribers will be processed.'),
   );
 
   $form['elobbyist_to'] = array(
@@ -59,6 +60,18 @@ function elobbyist_mailing_form($form, &$form_state, $entity) {
       '#relation_type' => 'elobbyist_to',
       '#title' => t('To'),
       '#weight' => 7,
+  );
+  
+  $form['start'] = array(
+    '#type' => 'date_popup',
+    '#date_type' => DATE_UNIX,
+    '#date_format' => ELOBBYIST_DATE_FULL_FORMAT,
+    '#title' => t('Start Date'),
+    '#default_value' => format_date($entity->start, 'custom', ELOBBYIST_DATE_FULL_FORMAT),
+    '#date_year_range' => '-0:+' . ELOBBYIST_MAILING_SCHEDULE_MAX_YEARS,
+    '#weight' => 8,
+    '#required' => FALSE,
+    '#exclude_cv' => TRUE,
   );
 
   $form['schedule'] = array(
@@ -69,17 +82,34 @@ function elobbyist_mailing_form($form, &$form_state, $entity) {
     '#options' => elobbyist_mailing_schedule_type_list(),
     '#required' => TRUE,
   );
-
-  $form['start'] = array(
-    '#type' => 'date_popup',
-    '#date_type' => DATE_UNIX,
-    '#date_format' => ELOBBYIST_DATE_FULL_FORMAT,
-    '#title' => t('Start Date'),
-    '#default_value' => format_date($entity->start, 'custom', ELOBBYIST_DATE_FULL_FORMAT),
-    '#date_year_range' => '-0:+' . ELOBBYIST_MAILING_SCHEDULE_MAX_YEARS,
-    '#weight' => 15,
-    '#required' => FALSE,
-    '#exclude_cv' => TRUE,
+  
+  $form['ongoing'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('On going schedule'),
+    '#weight' => 11,
+  );
+  
+  if (!empty($entity->mid)) {
+    $form['ongoing']['link'] = array(
+      '#markup' => theme('elobbyist_field',
+              array(
+                'title' => t('Public call to action link'),
+                'item' => l(filter_xss('elobbyist/' . $entity->mid), 'elobbyist/' . $entity->mid,
+                  array('attributes' => array('target' => '_blank'))),
+              )
+           ),
+      '#weight' => 12,
+    );
+  }
+  
+  $form['ongoing']['addtogrpid'] = array(
+    '#type' => 'select',
+    '#title' => t('Subscribers Group'),
+    '#default_value' => $entity->addtogrpid,
+    '#weight' => 13,
+    '#options' =>  array('' => '') + elobbyist_get_groups('subscribers'),
+    '#required' => FALSE, 
+    '#description' => t('Required. New subscribers from the public call to action page will be added to this group. Note: setting this field to a group included in the From field works but affects badly on performance.'),
   );
   
   $tmp = '';
@@ -87,30 +117,24 @@ function elobbyist_mailing_form($form, &$form_state, $entity) {
     $tmp = format_date($entity->end, 'custom', ELOBBYIST_DATE_FULL_FORMAT);
   }
   
-  $form['end'] = array(
+  $form['ongoing']['end'] = array(
     '#type' => 'date_popup',
     '#date_type' => DATE_UNIX,
     '#date_format' => ELOBBYIST_DATE_FULL_FORMAT,
     '#title' => t('End Date'),
     '#default_value' => $tmp,
-    '#weight' => 20,
+    '#weight' => 14,
     '#required' => FALSE,
-    '#description' => t('Effective only for an on-going schedule type'),
     '#exclude_cv' => TRUE,
   );
   
-  $form['time_part'] = array(
-    '#type' => 'timeperiod_select',
-    '#title' => t('Run cron job every'),
-    '#default_value' => $entity->time_part,
-    '#weight' => 25,
+  $form['ongoing']['successurl'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Success URL'),
+    '#default_value' => $entity->successurl,
+    '#weight' => 15,
     '#required' => FALSE,
-    '#units' => array(
-        '86400' => array('max' => ELOBBYIST_MAILING_SCHEDULE_MAX_DAYS, 'step size' => 1),
-        '3600' => array('max' => 23, 'step size' => 1),
-        '60' => array('max' => 59, 'step size' => 1),
-      ),
-    '#description' => t('Effective only for an on-going schedule type'),
+    '#description' => t('Redirect to this url on successful public subscription'),
   );
   
   //Add the buttons
@@ -141,34 +165,30 @@ function elobbyist_mailing_form($form, &$form_state, $entity) {
   return $form;
 }
 
-/*
- * Add subscription form functionality
- * 
- * See contact page to check fields
- * Set form field to public page, allow to set subscription
- * 
- * Save to mailing from field groups - according to subscription
- * 
- */
-function elobbyist_mailing_page_subscribe($form, &$form_state, $entity) {
-  
-}
-
 function elobbyist_mailing_page_form($form, &$form_state, $entity) {
   // Set the id to identify this as a record edit form.
   $form['#id'] = 'elobbyist_mailing-page-form';
 
   // Save the record for later, in case we need it.
   $form['#elobbyist_mailing'] = $entity;
-  $form_state['elobbyist_mailing'] = $entity;
+  $form_state['elobbyist_mailing'] = $entity; 
+    
+  $form['link'] = array(
+    '#markup' => theme('elobbyist_field',
+            array(
+              'title' => t('Link'),
+              'item' => l(filter_xss('elobbyist/' . $entity->mid), 'elobbyist/' . $entity->mid,
+                array('attributes' => array('target' => '_blank'))),
+            )
+         ),
+    '#weight' => -50,
+  );
   
   $form['page'] = array(
     '#type' => 'text_format',
     '#title' => t('Page content'),
     '#default_value' => $entity->page,
     '#weight' => 20,
-    '#cols' => 80,
-    '#rows' => 20,
     '#required' => TRUE,
   );
   
@@ -196,7 +216,7 @@ function elobbyist_mailing_status_list() {
 
 function elobbyist_mailing_schedule_type_list() {
   return array(
-    ELOBBYIST_MAILING_SCHEDULE_ONE_TIME => t('One-time run'),
+    ELOBBYIST_MAILING_SCHEDULE_SIMPLE => t('Simple run'),
     ELOBBYIST_MAILING_SCHEDULE_ON_GOING => t('On-going (public call to action)'),
   );
 }
@@ -210,24 +230,29 @@ function elobbyist_mailing_form_validate($form, &$form_state) {
   $entity->name = $form_state['values']['name'];
   $entity->tid = $form_state['values']['tid'];
   $entity->schedule = $form_state['values']['schedule'];
-  $entity->status = $form_state['values']['status'];
-  $entity->time_part = $form_state['values']['time_part'];
-  $entity->pagenid = $form_state['values']['pagenid'];
+  $entity->status = $form_state['values']['status'];  
 
   if (!empty($form_state['values']['start'])) {
     $entity->start = elobbyist_string_to_full_date($form_state['values']['start']);
   }
   
-  //for one-time task always set end date to start date
-  if ($entity->schedule == ELOBBYIST_MAILING_SCHEDULE_ONE_TIME) {
+  //for manual task always set end date to start date
+  if ($entity->schedule == ELOBBYIST_MAILING_SCHEDULE_SIMPLE) {
     $entity->end = $entity->start;
   }
-  else { //on going task    
-    if (!empty($form_state['values']['end'])) {
-      $entity->end = elobbyist_string_to_full_date($form_state['values']['end']);
+  else { //on going task   
+    $entity->successurl = $form_state['values']['successurl'];
+    $entity->addtogrpid = $form_state['values']['addtogrpid'];
     
-      if ($entity->end < ($entity->start + $entity->time_part)) {
-        form_set_error('end', t('End date must be greater than or equal to Start date + "Run cron job every".'));
+    if (empty($entity->addtogrpid)) {
+      form_set_error('addtogrpid', t('An on going schedule type requires filling Subscribers Group.'));
+    }
+    
+    if (!empty($form_state['values']['end']) && !is_array($form_state['values']['end'])) {
+      $entity->end = elobbyist_string_to_full_date($form_state['values']['end']);
+
+      if ($entity->end < ($entity->start)) {
+        form_set_error('end', t('End date must be greater than or equal to Start date'));
       }
     }
     else {
@@ -239,8 +264,10 @@ function elobbyist_mailing_form_validate($form, &$form_state) {
   
   //do not allow saving as active if to and from are not filled
   if ($entity->status == ELOBBYIST_MAILING_STATUS_ACTIVE) {
-    if (!elobbyist_groups_field_has_value('elobbyist_from', 'elobbyist_mailing', $form, $form_state)) {
-      form_set_error('elobbyist_from', t('An active mailing requires filling senders (From).'));
+    if ($entity->schedule == ELOBBYIST_MAILING_SCHEDULE_SIMPLE) {
+      if (!elobbyist_groups_field_has_value('elobbyist_from', 'elobbyist_mailing', $form, $form_state)) {
+        form_set_error('elobbyist_from', t('An active mailing requires filling senders (From).'));
+      }
     }
     if (!elobbyist_groups_field_has_value('elobbyist_to', 'elobbyist_mailing', $form, $form_state)) {
       form_set_error('elobbyist_to', t('An active mailing requires filling recipients (To).'));
@@ -250,6 +277,7 @@ function elobbyist_mailing_form_validate($form, &$form_state) {
   //Field validation
   field_attach_form_validate('elobbyist_mailing', $entity, $form, $form_state);
 }
+
 
 /**
  * Save functions
@@ -277,17 +305,10 @@ function elobbyist_mailing_form_submit($form, &$form_state) {
   if ($entity) {
     drupal_set_message(t('Mailing saved.'));
     
-    //notify when cron job settings filled on one-time job
-    if ($entity->schedule == ELOBBYIST_MAILING_SCHEDULE_ONE_TIME) {
-        if ($entity->time_part > 0) {
-          drupal_set_message(t('The "Run cron job every" field is filled, while it is only effective for an on-going schedule type'), 'warning');
-        }
-    }
-    
-    if ($entity->status == ELOBBYIST_MAILING_STATUS_ACTIVE) {
-      if ($entity->end < REQUEST_TIME) {
-        drupal_set_message(t('As long as this mailing dates are in the past it won\'t run.'), 'warning');
-      }
+    if ($entity->status == ELOBBYIST_MAILING_STATUS_ACTIVE &&
+        $entity->schedule == ELOBBYIST_MAILING_SCHEDULE_ON_GOING &&
+        $entity->end < REQUEST_TIME) {
+      drupal_set_message(t('As long as this mailing dates are in the past it\'s public call to action page won\'t be open to new subscribers.'), 'warning');
     }
     
     if ($new_record) {
@@ -308,8 +329,7 @@ function elobbyist_mailing_page_form_submit($form, &$form_state) {
   if ($entity) {
     if ($entity->status == ELOBBYIST_MAILING_STATUS_ACTIVE) {
       drupal_set_message(
-        t('Public call to action was saved. Notice @pagelink is now published.',
-          array('@pagelink' => l(t('the page'), 'elobbyist/' . $entity->mid))));
+        t('Public call to action was saved. The page is published.') );
     }
     elseif ($entity->status == ELOBBYIST_MAILING_STATUS_DRAFT) {
       drupal_set_message(
@@ -318,6 +338,7 @@ function elobbyist_mailing_page_form_submit($form, &$form_state) {
     }
   }
 }
+
 
 function elobbyist_mailing_save($entity) {
   return entity_get_controller('elobbyist_mailing')->save($entity);
@@ -397,6 +418,17 @@ function elobbyist_mailing_page_view($entity, $view_mode = 'full') {
       );
     }
   }
+  
+  $schedules = elobbyist_mailing_schedule_type_list();
+  $entity->content['schedule'] = array(
+      '#markup' => theme('elobbyist_field',
+          array(
+            'title' => t('Schedule'),
+            'item' => $schedules[$entity->schedule],
+          )
+       ),
+      '#weight' => -42,
+    );
 
   if (!empty($entity->status)) {
     $statuses = elobbyist_mailing_status_list();
@@ -407,18 +439,9 @@ function elobbyist_mailing_page_view($entity, $view_mode = 'full') {
             'item' => $statuses[$entity->status],
           )
        ),
-      '#weight' => -30,
+      '#weight' => -40,
     );
   }
-
-  $form['schedule'] = array(
-    '#type' => 'select',
-    '#title' => t('Schedule type'),
-    '#default_value' => $entity->schedule,
-    '#weight' => 10,
-    '#options' => elobbyist_mailing_schedule_type_list(),
-    '#required' => TRUE,
-  );
   
   $entity->content['start'] = array(
     '#markup' => theme('elobbyist_field',
@@ -427,26 +450,61 @@ function elobbyist_mailing_page_view($entity, $view_mode = 'full') {
             'item' => format_date($entity->start, 'custom', ELOBBYIST_DATE_FULL_FORMAT),
           )
        ),
-      '#weight' => -16,
+      '#weight' => -37,
   );
   
-  $entity->content['end'] = array(
-    '#markup' => theme('elobbyist_field',
+  if  ($entity->schedule == ELOBBYIST_MAILING_SCHEDULE_ON_GOING) {
+    $entity->content['link'] = array(
+      '#markup' => theme('elobbyist_field',
+              array(
+                'title' => t('Public call to action link'),
+                'item' => l(filter_xss('elobbyist/' . $entity->mid), 'elobbyist/' . $entity->mid,
+                  array('attributes' => array('target' => '_blank'))),
+              )
+           ),
+      '#weight' => -30,
+    );
+    
+    $entity->content['end'] = array(
+      '#markup' => theme('elobbyist_field',
           array(
             'title' => t('End Date'),
             'item' => format_date($entity->end, 'custom', ELOBBYIST_DATE_FULL_FORMAT),
           )
        ),
-      '#weight' => -16,
-  );
+      '#weight' => -36,
+    );
+    
+    if (!empty($entity->addtogrpid)) {
+      $tmp = entity_load('elobbyist_group', array($entity->addtogrpid));
 
-  $form['time_part'] = array(
-    '#type' => 'timeperiod_default',
-    '#title' => t('Run cron job every'),
-    '#default_value' => $entity->time_part,
-    '#weight' => 25,
-    '#required' => FALSE,
-  );
+      if ($tmp != null && is_array($tmp)) {
+        $entity->content['addtogrpid'] = array(
+          '#markup' => theme('elobbyist_field',
+              array(
+                'title' => t('Subscribers Group'),
+                'item' => l(filter_xss(current($tmp)->name), 'elobbyist/contact-group/' . $entity->addtogrpid . '/view'),
+              )
+           ),
+          '#weight' => -20,
+        );
+      }
+    }
+    
+    if (!empty($entity->successurl)) {
+      $url = check_url($entity->successurl);
+
+      $entity->content['successurl'] = array(
+        '#markup' => theme('elobbyist_field',
+              array(
+                'title' => t('Success URL'),
+                'item' => l($url, $url),
+              )
+           ),
+          '#weight' => -15,
+      ); 
+    }
+  }
   
   $entity->content['created'] = array(
     '#markup' => theme('elobbyist_field',
@@ -455,7 +513,7 @@ function elobbyist_mailing_page_view($entity, $view_mode = 'full') {
             'item' => format_date($entity->created, 'custom', ELOBBYIST_DATE_FULL_FORMAT),
           )
        ),
-      '#weight' => -16,
+      '#weight' => -2,
   );
   
   $entity->content['changed'] = array(
@@ -465,7 +523,7 @@ function elobbyist_mailing_page_view($entity, $view_mode = 'full') {
             'item' => format_date($entity->changed, 'custom', ELOBBYIST_DATE_FULL_FORMAT),
           )
        ),
-      '#weight' => -15,
+      '#weight' => -1,
   );
   
   // Build fields content.
@@ -480,93 +538,8 @@ function elobbyist_mailing_page_view($entity, $view_mode = 'full') {
 }
 
 /*
- * Build the call-to-action public page
- * 
- * For the page to be displayed - a mailing must be active, of schedule type on-going and start date has past
- * If not displayed: a general "Oops! the page you requested cannot be found" message is to be shown
- * 
- * For the page to receive subscribers, end date has yet to pass, taking into account also a setting of X minutes/hours even before end date
- */
-function elobbyist_mailing_action_page($entity) {
-  
-  $bExit = FALSE;
-  $bSubscriptionForm = FALSE;
-  
-  if (!isset($entity) || 
-      !isset($entity->schedule) || 
-      $entity->schedule != ELOBBYIST_MAILING_SCHEDULE_ON_GOING) {
-    $bExit = TRUE;
-  }
-  else {
-    switch($entity->status) {
-      case ELOBBYIST_MAILING_STATUS_ACTIVE:
-        if ($entity->start > REQUEST_TIME) {
-          if (!user_access('edit email lobbyist mailings')) {
-            $bExit = TRUE;
-             break;
-          }
-          else {
-            drupal_set_message(t('The page is not published, as its mailing has not started yet.'), 'warning');
-            break;
-          }
-        }
-        //user should have anonymous access
-        if (!user_access('view email lobbyist published pages')) {
-          $bExit = TRUE;
-          break;
-        }        
-        if (REQUEST_TIME > $entity->end) {
-          $bSubscriptionForm = TRUE;
-        }
-        else {
-          drupal_set_message(t('This action has ended.'), 'status');
-        }
-        break;
-      case ELOBBYIST_MAILING_STATUS_DRAFT:
-      case ELOBBYIST_MAILING_STATUS_CLOSED:
-      case ELOBBYIST_MAILING_STATUS_CANCELLED:
-        if (!user_access('edit email lobbyist mailings')) {
-          $bExit = TRUE;
-           break;
-        }
-        $statuses = elobbyist_mailing_status_list();
-        drupal_set_message(t('The page is not published, as its mailing is in status @status.',
-          array('@status' => $statuses[$entity->status])
-          ), 'warning');
-        break;
-      default:
-        //unknown status
-        $bExit = TRUE;
-        break;
-    }
-  }
-  
-  if ($bExit) {
-    drupal_set_title(t('Oops! The page you requested cannot be found'));
-    return array();
-  }
-
-  drupal_set_title($entity->name, PASS_THROUGH);
-
-  // Remove previously built content, if exists.
-  $entity->content = array();
-    
-  $entity->content['page'] = array(
-    '#markup' => $entity->page,
-    '#weight' => -50,
-  );
-  
-  if ($bSubscriptionForm) {
-    return drupal_get_form('elobbyist_mailing_page_subscribe', $entity);
-  }
-  else {
-    return $entity->content;
-  }
-}
-
-/*
  * Edit the mailing page field - only if mailing is of schedule type 'on-going' and status active or draft
- * On one-time schedule: display message. On closed/cancelled: show the content without editing
+ * On simple run mailing: display message. On closed/cancelled: show the content without editing
  */
 function elobbyist_mailing_action_page_edit($entity) {
   elobbyist_mailing_page_title($entity);
@@ -578,7 +551,7 @@ function elobbyist_mailing_action_page_edit($entity) {
     
   switch($entity->status) {
     case ELOBBYIST_MAILING_STATUS_ACTIVE:
-      if ($entity->end >= REQUEST_TIME) {
+      if ($entity->end < REQUEST_TIME) {
         drupal_set_message(t('The public call to action page can be edited, but it is not published because the mailing end date has past.'), 'warning');
       }
       elseif ($entity->start >= REQUEST_TIME) {
@@ -586,7 +559,7 @@ function elobbyist_mailing_action_page_edit($entity) {
       }
       break;
     case ELOBBYIST_MAILING_STATUS_DRAFT:
-      if (REQUEST_TIME > $entity->end) {
+      if ($entity->end < REQUEST_TIME) {
         drupal_set_message(t('The public call to action page can be edited, but it is not published because the mailing end date has past.'), 'warning');
       }
       else {
@@ -650,11 +623,11 @@ function elobbyist_mailing_grid() {
   
   $query->join('elobbyist_template', 't', 'p.tid = t.tid');
   
-  $query->extend('PagerDefault') 	//Pager Extender
+  $query =  $query->extend('PagerDefault') 	//Pager Extender
 					->limit(variable_get('elobbyist_records_per_page', ELOBBYIST_DEFAULT_RECORDS_PER_PAGE))				//results per page
-				->extend('TableSort')		//Sorting Extender
-					->orderByHeader($header)//Field to sort on is picked from $header
-				->fields ('p', array (
+          ->extend('TableSort')		//Sorting Extender
+					->orderByHeader($header) //Field to sort on is picked from $header
+          ->fields ('p', array (
                 'mid',
                 'tid',
                 'name',
@@ -663,8 +636,9 @@ function elobbyist_mailing_grid() {
                 'start', 
                 'end',
               )
-          )
-      ->addField ('t', 'name', 'tname');
+          );
+  
+  $query->addField ('t', 'name', 'tname');
   
 	$results = $query->execute();
 
@@ -680,7 +654,11 @@ function elobbyist_mailing_grid() {
               format_date($row->start, 'custom', 'Y-m-d'),
               format_date($row->end, 'custom', 'Y-m-d'),
               l(t('Edit'), 'elobbyist/mailing/'. $row->mid .'/edit'). '&nbsp;&nbsp;' .
-              l(t('Delete'), 'elobbyist/mailing/'. $row->mid .'/delete'),
+              l(t('Delete'), 'elobbyist/mailing/'. $row->mid .'/delete') .
+              ( $row->schedule == ELOBBYIST_MAILING_SCHEDULE_SIMPLE ? '' : '&nbsp;&nbsp;' .
+                l(t('Link'), 'elobbyist/' . $row->mid,
+                  array('attributes' => array('target' => '_blank')))
+               ),
 					)
 		);
 	}
@@ -732,30 +710,4 @@ function elobbyist_get_templates($current) {
   }
   
   return $result->fetchAllKeyed();
-}
-
-/*
- * 
- * original code - form http://drupal.org/node/1388922
- */
-function elobbyist_mailing_page_create($mailing) {
-  global $user;
-  
-  $values = array(
-    'type' => 'page',
-    'uid' => $user->uid,
-    'status' => 0, //1 - published
-    'comment' => 1, //2 = comments on, 1 = comments off
-    'promote' => 0, //1 - promoted
-  );
-  $entity = entity_create('node', $values);
-  $ewrapper = entity_metadata_wrapper('node', $entity);
-  $ewrapper->title->set($mailing->name);
-  
-  $template = entity_load('elobbyist_template', array($mailing->tid));
-  
-  $my_body_content = t('<p>Please consider sending the following letter:</p><br/>') . $template->body;
-  $ewrapper->body->set(array('value' => $my_body_content));
-  $ewrapper->save(true);
-  entity_save('node', $entity);
 }

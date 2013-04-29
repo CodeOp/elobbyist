@@ -5,27 +5,21 @@
  * 
  */
 class ELobbyistContactController extends DrupalDefaultEntityController {
-
-  public function __construct($entityType) {
-    parent::__construct($entityType);
-    
-    //remove password field, so it is not loaded by query
-    $query_fields = array_flip($this->entityInfo['schema_fields_sql']['base table']);
-    if (isset($query_fields['pass']))
-      unset($query_fields['pass']);
-    $this->entityInfo['schema_fields_sql']['base table'] = array_flip($query_fields);
-  }
   
   public function create($type = '') {
     return (object)array(
-      'cid' => '',
+      'cid' => NULL,
+      'mid' => NULL,
       'type' => $type,
-      'name' => '',
-      'email' => '',
-      'stype' => '',
-      'providerid' => '',
-      'notify' => variable_get('elobbyist_notify_default_admin', ELOBBYIST_DEFAULT_NOTIFY_ON_EMAILS_SENT_FOR_ADMIN_FORM),
-      'form' => '',
+      'name' => NULL,
+      'email' => NULL,
+      'stype' => NULL,
+      'providerid' => NULL,
+      'notify' => NULL,
+      'handle' => NULL,
+      'form' => NULL,
+      'bounce' => NULL,
+      'bounces' => NULL,
     );
   }
   
@@ -55,7 +49,8 @@ class ELobbyistContactController extends DrupalDefaultEntityController {
       
       // If this is a new record...
       if ($contact->is_new) {
-        // Save the new record.
+        // Save the new record
+        $contact->handle = base64_encode(md5(uniqid(base64_encode($contact->email), true)));
         drupal_write_record('elobbyist_contact', $contact);
                 
         $op = 'insert';
@@ -107,6 +102,13 @@ class ELobbyistContactController extends DrupalDefaultEntityController {
         field_attach_delete('elobbyist_contact', $contact);
 
         module_invoke_all('entity_delete', $contact, 'elobbyist_contact');
+      }
+      
+      if ($contact->type == 'subscriber') {
+        elobbyist_foreign_key_cascade_delete('elobbyist_activity', 'fromcid', 'aid', $cids);
+      }
+      elseif ($contact->type == 'recipient') {
+        elobbyist_foreign_key_cascade_delete('elobbyist_activity', 'tocid', 'aid', $cids);
       }
 
       db_ignore_slave();

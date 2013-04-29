@@ -3,9 +3,9 @@
 class ELobbyistEmailProviderController extends DrupalDefaultEntityController {
   public function create() {
     return (object)array(
-      'providerid' => '',
-      'name' => '',
-      'smtphost' => '',
+      'providerid' => NULL,
+      'name' => NULL,
+      'smtphost' => NULL,
       'smtpport' => variable_get('elobbyist_smtp_port_default', ELOBBYIST_DEFAULT_SMTP_PORT),
     );
   }

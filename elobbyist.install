@@ -27,32 +27,29 @@ function elobbyist_schema() {
   return $schema;
 }
 
-/*
- * Implements hook_install
- */
-function elobbyist_install() {
-  $role = user_role_load_by_name('anonymous');
-  if (isset($role->rid)) {
-    user_role_grant_permissions($role->rid, array('view email lobbyist published pages'));
-  }
-}
-
-/*
- * Implements hook_uninstall
- */
-function elobbyist_uninstall() {
-  $role = user_role_load_by_name('anonymous');
-  if (isset($role->rid)) {
-    user_role_revoke_permissions($rid, array('view email lobbyist published pages'));
-  }
-}
-
 /**
  * Implements hook_enable()
  */
 function elobbyist_enable() {
+  $role = user_role_load_by_name('anonymous user');
+  if (isset($role->rid)) {
+    user_role_grant_permissions($role->rid, array('view email lobbyist published pages'));
+    user_role_grant_permissions($role->rid, array('unsubscribe by unique handle'));
+    user_role_grant_permissions($role->rid, array('signup by unique handle'));
+    user_role_grant_permissions($role->rid, array('subscribe by unique handle'));
+    user_role_grant_permissions($role->rid, array('remove subscription by unique handle'));
+  }
+  $role = user_role_load_by_name('authenticated user');
+  if (isset($role->rid)) {
+    user_role_grant_permissions($role->rid, array('view email lobbyist published pages'));
+    user_role_grant_permissions($role->rid, array('unsubscribe by unique handle'));
+    user_role_grant_permissions($role->rid, array('signup by unique handle'));
+    user_role_grant_permissions($role->rid, array('subscribe by unique handle'));
+    user_role_grant_permissions($role->rid, array('remove subscription by unique handle'));
+  }
   elobbyist_relation_types_initialize();
   elobbyist_fields_initialize();
+  elobbyist_settings_restore();
 }
 
 /**
@@ -61,6 +58,23 @@ function elobbyist_enable() {
 function elobbyist_disable() {
   elobbyist_fields_dispose();  
   elobbyist_relations_dispose();
+  
+  $role = user_role_load_by_name('anonymous user');
+  if (isset($role->rid)) {
+    user_role_revoke_permissions($role->rid, array('view email lobbyist published pages'));
+    user_role_revoke_permissions($role->rid, array('unsubscribe by unique handle'));
+    user_role_revoke_permissions($role->rid, array('signup by unique handle'));
+    user_role_revoke_permissions($role->rid, array('subscribe by unique handle'));
+    user_role_revoke_permissions($role->rid, array('remove subscription by unique handle'));
+  }
+  $role = user_role_load_by_name('authenticated user');
+  if (isset($role->rid)) {
+    user_role_revoke_permissions($role->rid, array('view email lobbyist published pages'));
+    user_role_revoke_permissions($role->rid, array('unsubscribe by unique handle'));
+    user_role_revoke_permissions($role->rid, array('signup by unique handle'));
+    user_role_revoke_permissions($role->rid, array('subscribe by unique handle'));
+    user_role_revoke_permissions($role->rid, array('remove subscription by unique handle'));
+  }
 }
 
 function elobbyist_relation_types_initialize() {
@@ -377,6 +391,18 @@ function elobbyist_contact_get_schema() {
         'length' => '200',
         'not null' => TRUE,
       ),
+      'email' => array(
+        'description' => 'The contact email address.',
+        'type' => 'varchar',
+        'length' => '254',
+        'not null' => TRUE,
+      ),
+      'handle' => array(
+        'description' => 'a unique hard to guess string that can be used in links to stop subscriptions',
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => TRUE,
+      ),
       'form' => array(
         'description' => 'for subscriber - creating form',
         'type' => 'int',
@@ -385,17 +411,11 @@ function elobbyist_contact_get_schema() {
         'not null' => FALSE,
       ),
       'stype' => array(
-        'description' => 'for subscriber - subscription type: persistent or one-time subscriber?',
+        'description' => 'for subscriber - subscription type: persistent or specific-mailing subscriber?',
         'type' => 'int',
         'size' => 'tiny',
         'unsigned' => TRUE,
         'not null' => FALSE,
-      ),
-      'email' => array(
-        'description' => 'The contact email address.',
-        'type' => 'varchar',
-        'length' => '254',
-        'not null' => TRUE,
       ),
       'pass' => array(
         'description' => 'A subscriber email account password',
@@ -409,10 +429,29 @@ function elobbyist_contact_get_schema() {
         'unsigned' => TRUE,
         'not null' => FALSE,
       ),
+      'mid' => array(
+        'description' => 'Restrict to specific mailing.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => FALSE,
+      ),
       'notify' => array(
         'description' => 'Notify on emails sent.',
         'type' => 'int',
         'size' => 'tiny',
+        'unsigned' => TRUE,
+        'not null' => FALSE,
+      ),
+      'bounce' => array(
+        'description' => 'bouncing status',
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'not null' => FALSE,
+      ),
+      'bounces' => array(
+        'description' => 'bouncing count',
+        'type' => 'int',
         'unsigned' => TRUE,
         'not null' => FALSE,
       ),
@@ -432,9 +471,14 @@ function elobbyist_contact_get_schema() {
         'table' => 'elobbyist_email_provider',
         'columns' => array('providerid' => 'providerid'),
       ),
+      'mailing' => array(
+        'table' => 'elobbyist_mailing',
+        'columns' => array('mid' => 'mid'),
+      ),
     ),
     'unique keys' => array(
       'email' => array('email'),
+      'handle' => array('handle'),
     ),
     'primary key' => array('cid'),
     'indexes' => array(
@@ -442,6 +486,7 @@ function elobbyist_contact_get_schema() {
       'type' => array('type'),
       'name' => array('name'),
       'created' => array('created'),
+      'mid' => array('mid'),
     ),
   );
 }
@@ -529,6 +574,12 @@ function elobbyist_mailing_get_schema() {
         'type' => 'text',
         'not null' => FALSE,
       ),
+      'successurl' => array(
+        'description' => 'URL to redirect to after a successful public subscription',
+        'type' => 'varchar',
+        'length' => '300',
+        'not null' => FALSE,
+      ),
       'start' => array(
         'description' => 'The Unix timestamp for scheduling start time.',
         'type' => 'int',
@@ -539,8 +590,8 @@ function elobbyist_mailing_get_schema() {
         'type' => 'int',
         'not null' => FALSE,
       ),
-      'time_part' => array(
-        'description' => 'Every x time part. A time part (days, hours or minutes) for scheduling.',
+      'addtogrpid' => array(
+        'description' => 'Collects subscribers of on-going schedule type',
         'type' => 'int',
         'not null' => FALSE,
       ),
@@ -566,9 +617,12 @@ function elobbyist_mailing_get_schema() {
     ),
     'indexes' => array(
       'tid' => array('tid'),
+      'start' => array('start'),
+      'status' => array('status'),
+      'addtogrpid' => array('addtogrpid'),
     ),
     'primary key' => array('mid'),
-  ); 
+  );
 }
 
 function elobbyist_activity_get_schema() {
@@ -591,15 +645,15 @@ function elobbyist_activity_get_schema() {
         'description' => 'template id.',
         'type' => 'int',
         'unsigned' => TRUE,
-        'not null' => TRUE,
+        'not null' => FALSE,
       ),
-      'from' => array(
+      'fromcid' => array(
         'description' => 'Contact id.',
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
       ),
-      'to' => array(
+      'tocid' => array(
         'description' => 'Contact id.',
         'type' => 'int',
         'unsigned' => TRUE,
@@ -622,18 +676,20 @@ function elobbyist_activity_get_schema() {
       ),
       'contact_from' => array(
         'table' => 'elobbyist_contact',
-        'columns' => array('from' => 'cid'),
+        'columns' => array('fromcid' => 'cid'),
       ),
       'contact_to' => array(
         'table' => 'elobbyist_contact',
-        'columns' => array('to' => 'cid'),
+        'columns' => array('tocid' => 'cid'),
       ),
     ),
+    'unique keys' => array(
+      'activity_uk' => array('mid', 'fromcid', 'tocid'),
+    ),
     'indexes' => array(
-      'mid' => array('mid'),
       'tid' => array('tid'),
-      'from' => array('from'),
-      'to' => array('to'),
+      'fromcid' => array('fromcid'),
+      'tocid' => array('tocid'),
     ),
     'primary key' => array('aid'),
   );

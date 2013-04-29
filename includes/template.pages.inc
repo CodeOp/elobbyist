@@ -42,9 +42,8 @@ function elobbyist_template_form($form, &$form_state, $entity) {
     '#title' => t('Email Body'),
     '#default_value' => $entity->body,
     '#weight' => 20,
-    '#cols' => 80,
-    '#rows' => 10,
     '#required' => TRUE,
+    '#description' => t('For the email sender name placeholder, insert the text: [elobbyist:sender]'),
   );
   
   $form['status'] = array(
