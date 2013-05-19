@@ -992,16 +992,6 @@ function elobbyist_contact_page_title($contact) {
     '@title' => $contact->name, )), PASS_THROUGH);
 }
 
-/*
- * Get form types
- */
-function elobbyist_form_types() {
-  return array(
-    ELOBBYIST_FORM_ADMIN => t('admin form'),
-    ELOBBYIST_FORM_PUBLIC => t('public form'),
-  );
-}
-
 function elobbyist_mailing_list($mid) {
   $result = db_select('elobbyist_mailing', 'm')
           ->fields('m', array('mid', 'name'))

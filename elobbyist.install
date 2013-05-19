@@ -27,6 +27,15 @@ function elobbyist_schema() {
   return $schema;
 }
 
+
+/**
+ * Implements hook_install()
+ */
+function elobbyist_install() {
+  elobbyist_relation_types_initialize();
+  elobbyist_fields_initialize();
+}
+
 /**
  * Implements hook_enable()
  */
@@ -47,8 +56,6 @@ function elobbyist_enable() {
     user_role_grant_permissions($role->rid, array('subscribe by unique handle'));
     user_role_grant_permissions($role->rid, array('remove subscription by unique handle'));
   }
-  elobbyist_relation_types_initialize();
-  elobbyist_fields_initialize();
   elobbyist_settings_restore();
 }
 
@@ -56,8 +63,7 @@ function elobbyist_enable() {
  * Implements hook_disable()
  */
 function elobbyist_disable() {
-  elobbyist_fields_dispose();  
-  elobbyist_relations_dispose();
+  
   
   $role = user_role_load_by_name('anonymous user');
   if (isset($role->rid)) {
@@ -77,13 +83,21 @@ function elobbyist_disable() {
   }
 }
 
+/**
+ * Implements hook_uninstall()
+ */
+function elobbyist_uninstall() {
+  elobbyist_fields_dispose();  
+  elobbyist_relations_dispose();
+}
+
 function elobbyist_relation_types_initialize() {
   //create relation types in use
   $relation_types_info = array(
     array(
       'relation_type' => 'elobbyist_subscriber',
-      'label' => st('Subscriber Member of'),
-      'reverse_label' => st('Subscriber Member'),
+      'label' => st('Group Subscribers'),
+      'reverse_label' => st('Subscribers Group'),
       'directional' => FALSE,
       'transitive' => TRUE,
       'r_unique' => TRUE,
@@ -93,8 +107,8 @@ function elobbyist_relation_types_initialize() {
     ),
     array(
       'relation_type' => 'elobbyist_recipient',
-      'label' => st('Recipient Member of'),
-      'reverse_label' => st('Recipient Member'),
+      'label' => st('Group Recipients'),
+      'reverse_label' => st('Recipients Group'),
       'directional' => FALSE,
       'transitive' => TRUE,
       'r_unique' => TRUE,
@@ -104,8 +118,8 @@ function elobbyist_relation_types_initialize() {
     ),
     array(
       'relation_type' => 'elobbyist_from',
-      'label' => st('Sender'),
-      'reverse_label' => st('From'),
+      'label' => st('Mailing From'),
+      'reverse_label' => st('Sender Mailings'),
       'directional' => TRUE,
       'transitive' => TRUE,
       'r_unique' => TRUE,
@@ -115,8 +129,8 @@ function elobbyist_relation_types_initialize() {
     ),
     array(
       'relation_type' => 'elobbyist_to',
-      'label' => st('Recipient'),
-      'reverse_label' => st('To'),
+      'label' => st('Mailing To'),
+      'reverse_label' => st('Recipient Mailings'),
       'directional' => TRUE,
       'transitive' => TRUE,
       'r_unique' => TRUE,

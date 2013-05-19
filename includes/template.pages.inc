@@ -35,6 +35,7 @@ function elobbyist_template_form($form, &$form_state, $entity) {
     '#maxlength' => 500,
     '#size' => 83,
     '#required' => TRUE,
+    '#description' => t('Tokens: [elobbyist:sender] sender name; [elobbyist:recipient] - recipient name'),
   );
     
   $form['body'] = array(
@@ -43,7 +44,7 @@ function elobbyist_template_form($form, &$form_state, $entity) {
     '#default_value' => $entity->body,
     '#weight' => 20,
     '#required' => TRUE,
-    '#description' => t('For the email sender name placeholder, insert the text: [elobbyist:sender]'),
+    '#description' => t('Tokens: [elobbyist:sender] sender name; [elobbyist:recipient] - recipient name'),
   );
   
   $form['status'] = array(
@@ -83,14 +84,6 @@ function elobbyist_template_form($form, &$form_state, $entity) {
   return $form;
 }
 
-function elobbyist_template_status_list() {
-  return array(
-    ELOBBYIST_TEMPLATE_STATUS_DRAFT => t('Draft'),
-    ELOBBYIST_TEMPLATE_STATUS_ACTIVE => t('Active'),
-    ELOBBYIST_TEMPLATE_STATUS_CLOSED => t('Closed'),
-    ELOBBYIST_TEMPLATE_STATUS_CANCELLED => t('Cancelled'),
-  );
-}
 
 /**
  * Validate form

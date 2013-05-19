@@ -125,6 +125,23 @@ function elobbyist_settings_form() {
     '#weight' => 5,
   );
   
+  $form['elobbyist_max_emails_per_batch'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Max emails per batch'),
+    '#size' => 7,
+    '#max_length' => 7,
+    '#default_value' => variable_get('elobbyist_max_emails_per_batch', ELOBBYIST_DEFAULT_MAX_EMAILS_PER_BATCH),
+    '#description' => t('After this number of emails the cron job stops, even if a mailing wasn\'t completely processed. The next cron job run proceeds from the same place the previous one has stopped. Zero means all mailings are always processed in whole.'),
+    '#required' => TRUE,
+    '#weight' => 3,
+    '#rules' => array(
+      array(
+        'rule' => 'regexp[/^\d{0,7}$/]',
+        'error' => t('Enter an up to 7-digit number for %field.')
+        ),
+    ),
+  );
+  
   $form['elobbyist_max_bounces'] = array(
     '#type' => 'textfield',
     '#title' => t('Max Bounces'),

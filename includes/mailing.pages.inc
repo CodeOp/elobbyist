@@ -205,21 +205,6 @@ function elobbyist_mailing_page_form($form, &$form_state, $entity) {
   return $form;
 }
 
-function elobbyist_mailing_status_list() {
-  return array(
-    ELOBBYIST_MAILING_STATUS_DRAFT => t('Draft'),
-    ELOBBYIST_MAILING_STATUS_ACTIVE => t('Active'),
-    ELOBBYIST_MAILING_STATUS_CLOSED => t('Closed'),
-    ELOBBYIST_MAILING_STATUS_CANCELLED => t('Cancelled'),
-  );
-}
-
-function elobbyist_mailing_schedule_type_list() {
-  return array(
-    ELOBBYIST_MAILING_SCHEDULE_SIMPLE => t('Simple run'),
-    ELOBBYIST_MAILING_SCHEDULE_ON_GOING => t('On-going (public call to action)'),
-  );
-}
 
 /**
  * Validate form

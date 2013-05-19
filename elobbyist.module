@@ -185,14 +185,15 @@ function elobbyist_menu() {
       'weight' => variable_get('elobbyist_main_menu_weight', ELOBBYIST_DEFAULT_MAIN_MENU_WEIGHT),
     );
   
-  $items['admin/config/administration/elobbyist'] = array(
-    'title' => 'Email Lobbyist',
+  $items['elobbyist/settings'] = array(
+    'title' => 'Settings',
     'description' => 'Configuration for Email Lobbyist module',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('elobbyist_settings_form'),
     'access arguments' => array('administer email lobbyist'),
     'type' => MENU_NORMAL_ITEM,
     'file' => 'includes/settings.pages.inc',
+    'weight' => 1000,
   );
   
   $items['admin/config/administration/elobbyist/restore'] = array(
@@ -548,6 +549,19 @@ function elobbyist_menu() {
   return $items;
 }
 
+
+/*
+ * Implements hook_views_api()
+ */
+function elobbyist_views_api() {
+  $vpath = drupal_get_path('module', 'elobbyist') . '/views';
+  return array(
+    'api' => 3,
+    'path' => $vpath,
+    'template path' => $vpath,
+  );
+}
+
 /**
  * Implements hook_permission()
  */
@@ -736,6 +750,48 @@ function elobbyist_subscriber_types() {
   return array(
     ELOBBYIST_SUBSCRIBER_TYPE_MAILING => t('Specific Mailing'),
     ELOBBYIST_SUBSCRIBER_TYPE_PERSISTENT => t('Persistent'),
+  );
+}
+
+/*
+ * Get form types
+ */
+function elobbyist_form_types() {
+  return array(
+    ELOBBYIST_FORM_ADMIN => t('admin form'),
+    ELOBBYIST_FORM_PUBLIC => t('public form'),
+  );
+}
+
+function elobbyist_group_status_list() {
+  return array(
+    ELOBBYIST_GROUP_STATUS_ACTIVE => t('Active'),
+    ELOBBYIST_GROUP_STATUS_INACTIVE => t('Inactive'),
+  );
+}
+
+function elobbyist_mailing_status_list() {
+  return array(
+    ELOBBYIST_MAILING_STATUS_DRAFT => t('Draft'),
+    ELOBBYIST_MAILING_STATUS_ACTIVE => t('Active'),
+    ELOBBYIST_MAILING_STATUS_CLOSED => t('Closed'),
+    ELOBBYIST_MAILING_STATUS_CANCELLED => t('Cancelled'),
+  );
+}
+
+function elobbyist_mailing_schedule_type_list() {
+  return array(
+    ELOBBYIST_MAILING_SCHEDULE_SIMPLE => t('Simple run'),
+    ELOBBYIST_MAILING_SCHEDULE_ON_GOING => t('On-going (public call to action)'),
+  );
+}
+
+function elobbyist_template_status_list() {
+  return array(
+    ELOBBYIST_TEMPLATE_STATUS_DRAFT => t('Draft'),
+    ELOBBYIST_TEMPLATE_STATUS_ACTIVE => t('Active'),
+    ELOBBYIST_TEMPLATE_STATUS_CLOSED => t('Closed'),
+    ELOBBYIST_TEMPLATE_STATUS_CANCELLED => t('Cancelled'),
   );
 }
 
@@ -1462,6 +1518,7 @@ function elobbyist_get_notify_subject() {
  * modified for each added setting
  */
 function elobbyist_settings_restore() {
+  variable_del('elobbyist_max_emails_per_batch');
   variable_del('elobbyist_max_bounces');
   variable_del('elobbyist_sender_pass');
   variable_del('elobbyist_sender_providerid');

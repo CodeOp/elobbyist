@@ -18,12 +18,17 @@ class ElobbyistCronTask {
     */
   public function Run() {
     try {
+      $Sent = 0;
+      $MaxSend = variable_get('elobbyist_max_emails_per_batch', ELOBBYIST_DEFAULT_MAX_EMAILS_PER_BATCH);
+      
       $this->LoadMailings();
       
       foreach($this->Mailings as $mailing) {
-        $mail_obj = new ElobbyistCronTaskMailing($mailing);
-        $mail_obj->Process();
+        $mail_obj = new ElobbyistCronTaskMailing($mailing, $MaxSend);
+        $mail_obj->Process($Sent);
         unset($mail_obj);
+        if ($Sent >= $MaxSend && $MaxSend > 0)
+          break;
       }
     }
     catch(Exception $ex) {
@@ -74,19 +79,22 @@ class ElobbyistCronTaskMailing {
   protected $NotificationSubject = null;
   protected $MaxBounces = 0;
   
+  protected $Sent = 0;
+  protected $MaxSend = 0;
+  
   protected $ProcessFrom = TRUE; //used by NextSender()
   
   protected $Activities = array();
-  
-  
-  public function __construct($row) {
+
+  public function __construct($row, $max_send) {
     $this->Mailing = $row;
+    $this->MaxSend = $max_send;
   }
-  
+
    /*
     * Process emails for each mailing
     */
-  public function Process() {
+  public function Process(&$total_sent) {
     if (!$this->LoadContacts()) {
       return; //exit (skip this mailing) if there are no recipients/senders
     }
@@ -97,12 +105,13 @@ class ElobbyistCronTaskMailing {
     $this->LoadActivities();
 
     $Recipient = null;
+    $bMaxSendTest = FALSE;
     $Sender = $this->FirstSender();
     do {
       $bNotify = FALSE;
       reset($this->To);
       $Recipient = current($this->To);
-      $Body = str_replace('[elobbyist:sender]', $Sender->name, $this->Mailing->body);
+      $Body = NULL;
       $Pass = decrypt($Sender->pass, array('base64' => TRUE));
       $RecipientEmailList = array();
       $RecipientNameList = array();
@@ -118,18 +127,22 @@ class ElobbyistCronTaskMailing {
               $RecipientEmailList[] = $Recipient->email;
               $RecipientNameList[]  = $Recipient->name;
             }
+            $total_sent++;
+            $bMaxSendTest = ($total_sent >= $this->MaxSend && $this->MaxSend > 0);
           }
           elseif ($Sender->bounce == ELOBBYIST_CONTACT_EMAIL_BOUNCING_IGNORED) {
             break;
           }
         }
-      } while($Recipient = next($this->To));
+      } while(!$bMaxSendTest && $Recipient = next($this->To));
       if ($bNotify) {
         $this->NotifySender($Sender, $Body, $RecipientEmailList, $RecipientNameList);
       }
-    } while ($Sender = $this->NextSender());
+    } while (!$bMaxSendTest && $Sender = $this->NextSender());
 
-    $this->Close();
+    if (!$bMaxSendTest) {
+      $this->Close();
+    }
   }
   
   /*
@@ -145,6 +158,14 @@ class ElobbyistCronTaskMailing {
         return FALSE;
       $ep = current($eps);
       
+      $Body = str_replace(
+        array('[elobbyist:sender]',
+              '[elobbyist:recipient]'),
+        array($Sender->name,
+              $Recipient->name),
+        $this->Mailing->body
+      );
+      
       // Build the default headers
       $message = array();
       $message['headers'] = array(
@@ -154,7 +175,14 @@ class ElobbyistCronTaskMailing {
       );
 
       //subject is in the headers in this mail function, so copy it
-      $message['headers']['Subject'] = $this->Mailing->subject;
+      $message['headers']['Subject'] = str_replace(
+        array('[elobbyist:sender]',
+              '[elobbyist:recipient]'),
+        array($Sender->name,
+              $Recipient->name),
+        $this->Mailing->subject
+      );
+      
       $message['headers']['From'] = $message['headers']['Sender'] = $message['headers']['Return-Path'] = $Sender->email;
       $message['headers']['To'] = $Recipient->email;
       
@@ -482,6 +510,10 @@ class ElobbyistCronTaskMailing {
   }
   
   protected function ProcessGroupsToContactsRelations(&$groups, &$target, $relation_type) {
+    //from groups can be empty
+    if (count($groups) == 0) {
+      return;
+    }
     $query = new RelationQuery();
     $query->fieldCondition('endpoints', 'entity_type', 'elobbyist_group', '=');
     $query->fieldCondition('endpoints', 'entity_id', $groups, 'IN');

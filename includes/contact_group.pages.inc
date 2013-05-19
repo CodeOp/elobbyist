@@ -67,12 +67,6 @@ function elobbyist_group_form($form, &$form_state, $entity) {
   return $form;
 }
 
-function elobbyist_group_status_list() {
-  return array(
-    ELOBBYIST_GROUP_STATUS_ACTIVE => t('Active'),
-    ELOBBYIST_GROUP_STATUS_INACTIVE => t('Inactive'),
-  );
-}
 
 /*
  * Add record page callback
