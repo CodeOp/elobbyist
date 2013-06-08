@@ -227,7 +227,6 @@ function elobbyist_views_data() {
       'field' => array(
         'handler' => 'elobbyist_views_handler_linked_name',
         'click sortable' => TRUE,
-        'id field' => 'cid',
         'link_to_record default' => TRUE,
         'url' => 'elobbyist/contact/%/edit',
       ),
@@ -262,7 +261,7 @@ function elobbyist_views_data() {
       'title' => 'Form',
       'help' => 'for subscriber - creating form',
       'field' => array(
-        'handler' => 'elobbyist_views_handler_prerender_list',
+        'handler' => 'elobbyist_views_handler_list_field',
         'list' => elobbyist_form_types(),
         'click sortable' => TRUE,
       ),
@@ -281,7 +280,7 @@ function elobbyist_views_data() {
       'title' => 'Subscriber Type',
       'help' => 'for subscriber - subscription type: persistent or specific-mailing subscriber?',
       'field' => array(
-        'handler' => 'elobbyist_views_handler_prerender_list',
+        'handler' => 'elobbyist_views_handler_list_field',
         'list' => elobbyist_subscriber_types(),
         'click sortable' => TRUE,
       ),
@@ -368,7 +367,7 @@ function elobbyist_views_data() {
       'title' => 'Bounce',
       'help' => 'bouncing status',
       'field' => array(
-        'handler' => 'elobbyist_views_handler_prerender_list',
+        'handler' => 'elobbyist_views_handler_list_field',
         'list' => elobbyist_email_statuses(),
         'click sortable' => TRUE,
       ),
@@ -472,7 +471,6 @@ function elobbyist_views_data() {
       'field' => array(
         'handler' => 'elobbyist_views_handler_linked_name',
         'click sortable' => TRUE,
-        'id field' => 'providerid',
         'link_to_record default' => TRUE,
         'url' => 'elobbyist/email-provider/%/edit',
       ),
@@ -579,7 +577,6 @@ function elobbyist_views_data() {
       'field' => array(
         'handler' => 'elobbyist_views_handler_linked_name',
         'click sortable' => TRUE,
-        'id field' => 'grpid',
         'link_to_record default' => TRUE,
         'url' => 'elobbyist/contact-group/%/edit',
       ),
@@ -614,7 +611,7 @@ function elobbyist_views_data() {
       'title' => 'Status',
       'help' => 'group status: Active, Inactive.',
       'field' => array(
-        'handler' => 'elobbyist_views_handler_prerender_list',
+        'handler' => 'elobbyist_views_handler_list_field',
         'list' => elobbyist_group_status_list(),
         'click sortable' => TRUE,
       ),
@@ -688,7 +685,6 @@ function elobbyist_views_data() {
       'field' => array(
         'handler' => 'elobbyist_views_handler_linked_name',
         'click sortable' => TRUE,
-        'id field' => 'mid',
         'link_to_record default' => TRUE,
         'url' => 'elobbyist/mailing/%/edit',
       ),
@@ -730,7 +726,7 @@ function elobbyist_views_data() {
       'title' => 'Schedule',
       'help' => 'schedule type.',
       'field' => array(
-        'handler' => 'elobbyist_views_handler_prerender_list',
+        'handler' => 'elobbyist_views_handler_list_field',
         'list' => elobbyist_mailing_schedule_type_list(),
         'click sortable' => TRUE,
       ),
@@ -749,7 +745,7 @@ function elobbyist_views_data() {
       'title' => 'Status',
       'help' => 'mailing status: Draft, Scheduled, Cancelled, Closed.',
       'field' => array(
-        'handler' => 'elobbyist_views_handler_prerender_list',
+        'handler' => 'elobbyist_views_handler_list_field',
         'list' => elobbyist_mailing_status_list(),
         'click sortable' => TRUE,
       ),
@@ -943,7 +939,6 @@ function elobbyist_views_data() {
       'field' => array(
         'handler' => 'elobbyist_views_handler_linked_name',
         'click sortable' => TRUE,
-        'id field' => 'tid',
         'link_to_record default' => TRUE,
         'url' => 'elobbyist/template/%/edit',
       ),
@@ -989,7 +984,7 @@ function elobbyist_views_data() {
       'title' => 'Status',
       'help' => 'template status: Draft, Sent, Closed, Cancelled.',
       'field' => array(
-        'handler' => 'elobbyist_views_handler_prerender_list',
+        'handler' => 'elobbyist_views_handler_list_field',
         'list' => elobbyist_template_status_list(),
         'click sortable' => TRUE,
       ),

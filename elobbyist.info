@@ -23,6 +23,6 @@ files[] = includes/mailing.controller.inc
 files[] = includes/activity.controller.inc
 files[] = includes/template.controller.inc
 files[] = includes/email_provider.controller.inc
-files[] = views/handlers/elobbyist_views_handler_prerender_list.inc
+files[] = views/handlers/elobbyist_views_handler_list_field.inc
 files[] = views/handlers/elobbyist_views_handler_link.inc
 files[] = views/handlers/elobbyist_views_handler_linked_name.inc
