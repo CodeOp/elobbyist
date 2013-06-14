@@ -13,6 +13,8 @@
 
 function elobbyist_settings_form() {  
   
+  drupal_set_title(t('Email Lobbyist Settings'), PASS_THROUGH);
+  
   $form['notifications'] = array(
     '#type' => 'fieldset',
     '#title' => t('Notifications'),
@@ -163,8 +165,9 @@ function elobbyist_settings_form() {
     '#type' => 'select',
     '#title' => t('Records per page'),
     '#default_value' => variable_get('elobbyist_records_per_page', ELOBBYIST_DEFAULT_RECORDS_PER_PAGE),
+    '#cache_invalidator' => TRUE,
     '#options' => elobbyist_config_records_per_page_options(),
-    '#description' => t('Records per page to display on grids/tables.'),
+    '#description' => t('Records per page to display on grids/tables. Changing this value flushes Drupal\'s cache.'),
     '#required' => TRUE,
     '#weight' => 10,
   );
@@ -173,10 +176,11 @@ function elobbyist_settings_form() {
     '#type' => 'textfield',
     '#title' => t('Main menu weight'),
     '#default_value' => variable_get('elobbyist_main_menu_weight', ELOBBYIST_DEFAULT_MAIN_MENU_WEIGHT),
+    '#cache_invalidator' => TRUE,
     '#size' => 4,
     '#max_length' => 4,
     '#description' => t('Sets the location of the Email Lobbyist main menu inside Drupal\'s menu toolbar. 
-      Clearing Drupal\'s cache after save is required for the setting to take effect.'),
+      Changing this value flushes Drupal\'s cache.'),
     '#required' => TRUE,
     '#weight' => 50,
     '#rules' => array(
@@ -187,22 +191,31 @@ function elobbyist_settings_form() {
     ),
   );
 
-  $form['actions'] = array();
-  $form['actions']['#type'] = 'actions';
-
-  $form['actions']['submit'] = array(
-    '#type' => 'submit', 
+  $form['buttons'] = array();
+  $form['buttons']['#weight'] = 200;
+  $form['buttons']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save configuration'),
+    '#weight' => 10,
     '#submit' => array('elobbyist_settings_form_submit'),
-    '#value' => t('Save configuration')
   );
-
-  $form['actions']['restore'] = array(
-    '#type' => 'submit', 
-    '#submit' => array('elobbyist_settings_form_restore_submit'),
+  
+  $form['buttons']['restore'] = array(
+    '#type' => 'submit',
     '#value' => t('Restore defaults'),
+    '#weight' => 20,
+    '#submit' => array('elobbyist_settings_form_restore_submit'),
     '#limit_validation_errors' => array(),       // No validation.
   );
-
+  
+  $form['elobbyist_do_not_flash_cache'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Do not flush Drupal\'s cache'),
+    '#description' => t('Do not flush Drupal\'s cache even when settings that require flushing to take effect have changed. Manual cache flushing will be needed for those settings to take affect. This form does not flush Drupal\'s cache when such settings have not changed.'),
+    '#default_value' => ELOBBYIST_DEFAULT_DO_NOT_FLUSH_DRUPAL_CACHE,
+    '#weight' => 210,
+  ); 
+  
   if (!empty($_POST) && form_get_errors()) {
     drupal_set_message(t('The settings have not been saved because of the errors.'), 'error');
   }
@@ -238,7 +251,8 @@ function elobbyist_settings_form_submit($form, &$form_state) {
   // Exclude unnecessary elements.
   form_state_values_clean($form_state);
 
-  elobbyist_settings_form_set_values($form_state['values']);
+  if (elobbyist_settings_form_set_values($form, $form_state['values']))
+    drupal_flush_all_caches();
 
   drupal_set_message(t('The configuration options have been saved.'));
 }
@@ -246,33 +260,81 @@ function elobbyist_settings_form_submit($form, &$form_state) {
 /*
  * Handles settings save, including inside fieldsets (by recurse)
  * 
- * Since this is an admin form, it's ok to pass arrays by value as is the PHP default behaviour
+ * Since this is an admin form, it's ok to pass arrays by value
+ * 
+ * Returns True when need to flush the cache
  */
-function elobbyist_settings_form_set_values($values) {
+function elobbyist_settings_form_set_values($form, $values) {
+  $cache_clear = FALSE;
+  $cache_unclear = FALSE;
+  $value_to_set = NULL;
+    
   foreach ($values as $key => $value) {
+
     switch($key) {
+      case 'elobbyist_do_not_flash_cache':
+        if ($value) {
+          $cache_unclear = TRUE;
+        }
+        break;
       case 'elobbyist_notify_body':
-        variable_set($key, $value['value']);
+        $value_to_set = $value['value'];
         break;
       case 'elobbyist_sender_pass':
         if (empty($value))
           continue; //don't delete password when not entered
         else { 
           ////encrypt password
-          variable_set($key, encrypt($value, array('base64' => TRUE)));
+          $value_to_set = encrypt($value, array('base64' => TRUE));
         }
         break;
       default:
         if (is_array($value)) {
-          elobbyist_settings_form_set_values($value);
+          if (elobbyist_settings_form_set_values($form[$key], $values[$key])) {
+            $cache_clear = TRUE;
+          }
+          continue;
         }
         //make sure only intended values are saved
         else if (strpos($key, 'elobbyist_') === 0) {
-          variable_set($key, $value);
+          $value_to_set = $value;
+        }
+        else {
+          continue;
         }
         break;
     }
+
+    if (elobbyist_settings_cache_clear_check($form, $key, $value_to_set )) {
+      $cache_clear = TRUE;
+    }
+
+    variable_set($key, $value_to_set);
   }
+  
+  //user has chosen not to flush cache
+  if ($cache_unclear) {
+    return FALSE;
+  }
+
+  return $cache_clear;
+}
+
+function elobbyist_settings_cache_clear_check($form, $key, $value_to_set) {
+  if (isset($form[$key]['#cache_invalidator'])) {
+    if (isset($form[$key]['#default_value'])) {
+      $default = variable_get($key, $form[$key]['#default_value']);
+      //check if value has really changed before clearing cahce
+      if ($default != $value_to_set) { 
+        return TRUE;
+      }
+    }
+    else {
+      //cannot check if value has changed, so clear cache just in case
+      return TRUE; 
+    }
+  }
+  return FALSE;
 }
 
 /*

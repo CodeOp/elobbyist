@@ -251,186 +251,31 @@ function elobbyist_group_delete_confirm_submit($form, &$form_state) {
  * Display list of groups
  */
 function elobbyist_contacts_groups_grid($type) {
- 
-  //Create a list of headers for sorting
-	$header = array( 
-    array('data' => t('Group Name'), 'field' => 'name', 'sort' => 'asc'),
-    array('data' => t('Status'), 'field' => 'status', 'sort' => 'asc'),
-    array('data' => ''),
-  );
   
   $types = elobbyist_group_types();
-  
-  $statuses = elobbyist_group_status_list();
-  
-  //change default "Groups" title provided by menu
   drupal_set_title($types[$type]->plural);
   
-	//Create the Sql query
-	$results = elobbyist_contacts_groups_grid_data($type, $header);
-
-  //go through resultset
-	$rows = array();
-  if ($results) {
-    foreach ($results as $row) {
-      $rows[] = array(
-            'data' => array(
-                l($row->name, 'elobbyist/contact-group/'. $row->grpid .'/edit'),
-                $statuses[$row->status],
-                l(t('Edit'), 'elobbyist/contact-group/'. $row->grpid .'/edit') . '&nbsp;&nbsp;' .
-                l(t('Delete'), 'elobbyist/contact-group/'. $row->grpid .'/delete'),
-            )
-      );
-    }
-  }
-	
-	//Theme the html table
-	$html = l(t('Add new group'), 'elobbyist/' . $type . '/groups/add') .
-    theme('table', 
-				array(
-					'header' => $header,
-					'rows'=>$rows,
-					'sticky' => TRUE,
-					'empty' => t('No records.'),
-				)
-			);
-	
-	//Append pager
-	$html .= theme('pager',
-				array(
-					'tags' => array()
-				)
-			);
-			
-	return ($html);
+  return l(t('Add new group'), 'elobbyist/' . $type . '/groups/add') .
+    views_embed_view('elobbyist_' . $type . '_groups');
 }
-
 
 /*
  * Display list of a group members
  */
-function elobbyist_group_contacts_grid($entity) {
- 
-  //Create a list of headers for sorting
-	$header = array( 
-              array('data' => t('Full Name'), 'field' => 'name', 'sort' => 'asc')	,
-              array('data' => t('Email'), 'field' => 'email', 'sort' => 'asc'),
-  );
-      
-  $subscriber_types = null;
-  $email_statuses = null;
-  if ($entity->type == 'subscribers') {
-    $header[] = array('data' => t('Status'), 'field' => 'bounce', 'sort' => 'asc');
-    $header[] = array('data' => t('Subscription'), 'field' => 'stype', 'sort' => 'asc');
-    
-    $subscriber_types = elobbyist_subscriber_types();
-    $email_statuses = elobbyist_email_statuses();
-  }
-  
-  $header[] = array('data' => '');
-  
-  
+function elobbyist_group_contacts_grid($entity) { 
   elobbyist_group_page_title($entity);
-
-	//Create the Sql query
-	$results = elobbyist_group_contacts_grid_data($entity->grpid);
-
-  $rows = array();
-  if ($results) {
-    //subscribers
-    if (isset($subscriber_types)) {
-      foreach ($results as $row) {
-        $rows[] = array(
-              'data' => array(
-                  l($row->name, 'elobbyist/contact/'. $row->cid .'/edit'),
-                  $row->email,
-                  !isset($row->bounce) ? '' : $email_statuses[$row->bounce],
-                  empty($row->stype) ? '' : $subscriber_types[$row->stype],
-                  l(t('Edit'), 'elobbyist/contact/'. $row->cid .'/edit'),
-              )
-        );
-      }
-    }
-    //recipients
-    else {
-      foreach ($results as $row) {
-        $rows[] = array(
-              'data' => array(
-                  l($row->name, 'elobbyist/contact/'. $row->cid .'/edit'),
-                  $row->email,
-                  l(t('Edit'), 'elobbyist/contact/'. $row->cid .'/edit'),
-              )
-        );
-      }
-    }
+ 
+  $view = NULL;
+  if ($entity->type == 'subscribers') {
+    $view = views_get_view('elobbyist_subscribers_by_group');
   }
-	
-	//Theme the html table
-	$html = theme('table', 
-				array(
-					'header' => $header,
-					'rows'=>$rows,
-					'sticky' => TRUE,
-					'empty' => t('No records.'),
-				)
-			);
-	
-	//Append pager
-	$html .= theme('pager',
-				array(
-					'tags' => array()
-				)
-			);
-			
-	return $html;
-}
-
-function elobbyist_contacts_groups_grid_data($type, &$header) {  
-  //invoke hook_elobbyist_contact_grid to allow a different data source
-  //example of how the module could be extended to use CRM modules
-  /*$results = module_invoke_all('elobbyist_group_rows', $header, array('type' => $type));
-
-  if ($results)
-    return $results;*/
-  
-  //Create the Sql query
-	$query = db_select('elobbyist_group', 'cg');
-  
-	$query = $query->condition('type', $type)
-				->extend('PagerDefault') 	//Pager Extender
-					->limit(variable_get('elobbyist_records_per_page', ELOBBYIST_DEFAULT_RECORDS_PER_PAGE))				//results per page
-				->extend('TableSort')		//Sorting Extender
-					->orderByHeader($header);//Field to sort on is picked from $header
-  
-  $query = $query->fields ('cg', array (
-                'grpid',
-                'name',
-                'status',
-              )
-          );
-  	
-	return $query->execute();
-}
-
-/*
- * Get contacts by group
- */
-function elobbyist_group_contacts_grid_data($grpid) {
-  $relations = elobbyist_relations_get_data('elobbyist_group', $grpid);
-    
-  $cids = array();
-    
-  foreach($relations as $relation) {
-    foreach($relation->endpoints as $endpoints) {
-      foreach($endpoints as $endpoint) {
-        //add each group endpoint
-        if ($endpoint['entity_type'] == 'elobbyist_contact') {
-          //load contact
-          $cids[] = $endpoint['entity_id'];
-        }
-      }
-    }
+  else {
+    $view = views_get_view('elobbyist_recipients_by_group');
   }
-  
-  return entity_load('elobbyist_contact', $cids);
+
+  $filter_by_group = $view->get_item('default', 'filter', 'grpid');
+  $filter_by_group['value'] = $entity->grpid;
+
+  $view->set_item('default', 'filter', 'grpid', $filter_by_group);
+  return $view->execute_display('default');
 }

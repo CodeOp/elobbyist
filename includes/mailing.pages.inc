@@ -587,85 +587,8 @@ function elobbyist_mailing_page_edit($entity) {
  * list mailings
  */
 function elobbyist_mailing_grid() {
-  //Create a list of headers for sorting
-	$header = array( 
-    array('data' => t('Mailing Name'), 'field' => 'name', 'sort' => 'asc'),
-    array('data' => t('Template'), 'field' => 'tname', 'sort' => 'asc'),
-    array('data' => t('Status'), 'field' => 'status', 'sort' => 'asc'),
-    array('data' => t('Schedule'), 'field' => 'schedule', 'sort' => 'asc'),
-    array('data' => t('Start'), 'field' => 'start', 'sort' => 'desc'),
-    array('data' => t('End'), 'field' => 'end', 'sort' => 'desc'),
-    array('data' => ''),
-  );
-  
-  $statuses = elobbyist_mailing_status_list();
-  
-  $schedule_types = elobbyist_mailing_schedule_type_list();
-  
-	//Create the Sql query
-	$query = db_select('elobbyist_mailing', 'p');
-  
-  $query->join('elobbyist_template', 't', 'p.tid = t.tid');
-  
-  $query =  $query->extend('PagerDefault') 	//Pager Extender
-					->limit(variable_get('elobbyist_records_per_page', ELOBBYIST_DEFAULT_RECORDS_PER_PAGE))				//results per page
-          ->extend('TableSort')		//Sorting Extender
-					->orderByHeader($header) //Field to sort on is picked from $header
-          ->fields ('p', array (
-                'mid',
-                'tid',
-                'name',
-                'status',
-                'schedule',
-                'start', 
-                'end',
-              )
-          );
-  
-  $query->addField ('t', 'name', 'tname');
-  
-	$results = $query->execute();
-
-  //go through resultset
-	$rows = array();	
-	foreach ($results as $row) {
-		$rows[] = array(
-					'data' => array(
-						  l($row->name, 'elobbyist/mailing/'. $row->mid .'/edit'),
-              l($row->tname, 'elobbyist/template/'. $row->tid .'/edit'),
-						  $statuses[$row->status],
-              $schedule_types[$row->schedule],
-              format_date($row->start, 'custom', 'Y-m-d'),
-              format_date($row->end, 'custom', 'Y-m-d'),
-              l(t('Edit'), 'elobbyist/mailing/'. $row->mid .'/edit'). '&nbsp;&nbsp;' .
-              l(t('Delete'), 'elobbyist/mailing/'. $row->mid .'/delete') .
-              ( $row->schedule == ELOBBYIST_MAILING_SCHEDULE_SIMPLE ? '' : '&nbsp;&nbsp;' .
-                l(t('Link'), 'elobbyist/' . $row->mid,
-                  array('attributes' => array('target' => '_blank')))
-               ),
-					)
-		);
-	}
-  	
-	//Theme the html table
-	$html = l(t('Add new mailing'), 'elobbyist/mailings/add') .
-     theme('table', 
-				array(
-					'header' => $header,
-					'rows'=>$rows,
-					'sticky' => TRUE,
-					'empty' => t('No records.'),
-				)
-			);
-	
-	//Append pager
-	$html .= theme('pager',
-				array(
-					'tags' => array()
-				)
-			);
-			
-	return ($html);
+  return l(t('Add new mailing'), 'elobbyist/mailings/add') .
+    views_embed_view('elobbyist_mailings');
 }
 
 /*

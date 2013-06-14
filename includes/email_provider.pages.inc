@@ -167,63 +167,8 @@ function elobbyist_email_provider_delete_confirm_submit($form, &$form_state) {
  * list email providers
  */
 function elobbyist_email_provider_grid() {
-  //Create a list of headers for sorting
-	$header = array( 
-    array('data' => t('Provider Name'), 'field' => 'name', 'sort' => 'asc'),
-    array('data' => t('SMTP Server'), 'field' => 'smtphost', 'sort' => 'asc'),
-    array('data' => t('Port'), 'field' => 'smtpport', 'sort' => 'asc'),
-    array('data' => ''),
-  );
-
-	//Create the Sql query
-	$query = db_select('elobbyist_email_provider', 'p')
-				->extend('PagerDefault') 	//Pager Extender
-					->limit(variable_get('elobbyist_records_per_page', ELOBBYIST_DEFAULT_RECORDS_PER_PAGE))				//results per page
-				->extend('TableSort')		//Sorting Extender
-					->orderByHeader($header)//Field to sort on is picked from $header
-				->fields ('p', array (
-                'providerid',
-                'name',
-                'smtphost',
-                'smtpport',
-              )
-          );
-	
-	$results = $query->execute();
-
-  //go through resultset
-	$rows = array();	
-	foreach ($results as $row) {
-		$rows[] = array(
-					'data' => array(
-						  l($row->name, 'elobbyist/email-provider/'. $row->providerid .'/edit'),
-						  $row->smtphost,
-						  $row->smtpport,
-              l(t('Edit'), 'elobbyist/email-provider/'. $row->providerid .'/edit'). '&nbsp;&nbsp;' .
-              l(t('Delete'), 'elobbyist/email-provider/'. $row->providerid .'/delete'),
-					)
-		);
-	}
-  	
-	//Theme the html table
-	$html = l(t('Add new email provider'), 'elobbyist/email-providers/add') .
-     theme('table', 
-				array(
-					'header' => $header,
-					'rows'=>$rows,
-					'sticky' => TRUE,
-					'empty' => t('No records.'),
-				)
-			);
-	
-	//Append pager
-	$html .= theme('pager',
-				array(
-					'tags' => array()
-				)
-			);
-			
-	return ($html);
+  return l(t('Add new email provider'), 'elobbyist/email-providers/add') .
+    views_embed_view('elobbyist_providers');
 }
 
 /*

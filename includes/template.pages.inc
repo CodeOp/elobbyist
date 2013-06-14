@@ -179,65 +179,8 @@ function elobbyist_template_delete_confirm_submit($form, &$form_state) {
  * list templates
  */
 function elobbyist_template_grid() {
-  //Create a list of headers for sorting
-	$header = array( 
-    array('data' => t('Template Name'), 'field' => 'name', 'sort' => 'asc'),
-    array('data' => t('Subject'), 'field' => 'subject', 'sort' => 'asc'),
-    array('data' => t('Status'), 'field' => 'status', 'sort' => 'asc'),
-    array('data' => ''),
-  );
-  
-  $statuses = elobbyist_template_status_list();
-
-	//Create the Sql query
-	$query = db_select('elobbyist_template', 'p')
-				->extend('PagerDefault') 	//Pager Extender
-					->limit(variable_get('elobbyist_records_per_page', ELOBBYIST_DEFAULT_RECORDS_PER_PAGE))				//results per page
-				->extend('TableSort')		//Sorting Extender
-					->orderByHeader($header)//Field to sort on is picked from $header
-				->fields ('p', array (
-                'tid',
-                'name',
-                'subject',
-                'status',
-              )
-          );
-	
-	$results = $query->execute();
-
-  //go through resultset
-	$rows = array();	
-	foreach ($results as $row) {
-		$rows[] = array(
-					'data' => array(
-						  l($row->name, 'elobbyist/template/'. $row->tid .'/edit'),
-						  $row->subject,
-						  $statuses[$row->status],
-              l(t('Edit'), 'elobbyist/template/'. $row->tid .'/edit'). '&nbsp;&nbsp;' .
-              l(t('Delete'), 'elobbyist/template/'. $row->tid .'/delete'),
-					)
-		);
-	}
-	
-	//Theme the html table
-	$html = l(t('Add new template'), 'elobbyist/templates/add') .
-     theme('table', 
-				array(
-					'header' => $header,
-					'rows'=>$rows,
-					'sticky' => TRUE,
-					'empty' => t('No records.'),
-				)
-			);
-	
-	//Append pager
-	$html .= theme('pager',
-				array(
-					'tags' => array()
-				)
-			);
-			
-	return ($html);
+  return l(t('Add new template'), 'elobbyist/templates/add') .
+    views_embed_view('elobbyist_templates');
 }
 
 /*

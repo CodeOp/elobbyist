@@ -26,3 +26,4 @@ files[] = includes/email_provider.controller.inc
 files[] = views/handlers/elobbyist_views_handler_list_field.inc
 files[] = views/handlers/elobbyist_views_handler_link.inc
 files[] = views/handlers/elobbyist_views_handler_linked_name.inc
+files[] = views/handlers/elobbyist_views_handlers.inc

@@ -1058,150 +1058,16 @@ function elobbyist_subscriber_by_handle(&$handle) {
  * Display list of subscribers
  */
 function elobbyist_subscribers_grid() {
- 
-  //Create a list of headers for sorting
-	$header = array( 
-    array('data' => t('Full Name'), 'field' => 'name', 'sort' => 'asc'),
-    array('data' => t('Email'), 'field' => 'email', 'sort' => 'asc'),
-    array('data' => t('Provider'), 'field' => 'provider_name', 'sort' => 'asc'),
-    array('data' => t('Status'), 'field' => 'bounce', 'sort' => 'asc'),
-    array('data' => t('Subscription'), 'field' => 'stype', 'sort' => 'asc'),
-    array('data' => ''),
-  );
-  
-  $subscriber_types = elobbyist_subscriber_types();
-  
-  $email_statuses = elobbyist_email_statuses();
-
-	//Create the Sql query
-	$results = elobbyist_contacts_grid_data('subscriber', $header);
-
-  //go through resultset
-	$rows = array();
-  if ($results) {
-    foreach ($results as $row) {
-      $rows[] = array(
-            'data' => array(
-                l($row->name, 'elobbyist/contact/'. $row->cid .'/edit'),
-                $row->email,
-                $row->provider_name,
-                !isset($row->bounce) ? '' : $email_statuses[$row->bounce],
-                empty($row->stype) ? '' : $subscriber_types[$row->stype],
-                l(t('Edit'), 'elobbyist/contact/'. $row->cid .'/edit') . '&nbsp;&nbsp;' .
-                l(t('Delete'), 'elobbyist/contact/'. $row->cid .'/delete'),
-            )
-      );
-    }
-  }
-	
-	//Theme the html table
-	$html = l(t('Add new subscriber'), 'elobbyist/subscribers/add/subscriber') .
-    theme('table', 
-				array(
-					'header' => $header,
-					'rows'=>$rows,
-					'sticky' => TRUE,
-					'empty' => t('No records.'),
-				)
-			);
-	
-	//Append pager
-	$html .= theme('pager',
-				array(
-					'tags' => array()
-				)
-			);
-			
-	return ($html);
+  return l(t('Add new subscriber'), 'elobbyist/subscribers/add/subscriber') .
+    views_embed_view('elobbyist_subscribers');
 }
 
 /*
  * Display list of recipients
  */
 function elobbyist_recipients_grid() {
-  //Create a list of headers for sorting
-	$header = array( 
-    array('data' => t('Full Name'), 'field' => 'name', 'sort' => 'asc'),
-    array('data' => t('Email'), 'field' => 'email', 'sort' => 'asc'),
-    array('data' => ''),
-  );
-  
-	$results = elobbyist_contacts_grid_data('recipient', $header);
-
-  //go through resultset
-	$rows = array();
-  if ($results) {
-    foreach ($results as $row) {
-      $rows[] = array(
-            'data' => array(
-                l($row->name, 'elobbyist/contact/'. $row->cid .'/edit'),
-                $row->email,
-                l(t('Edit'), 'elobbyist/contact/'. $row->cid .'/edit'). '&nbsp;&nbsp;' .
-                l(t('Delete'), 'elobbyist/contact/'. $row->cid .'/delete'),
-            )
-      );
-    }
-  }
-  	
-	//Theme the html table
-	$html = l(t('Add new recipient'), 'elobbyist/recipients/add/recipient') .
-    theme('table', 
-				array(
-					'header' => $header,
-					'rows'=>$rows,
-					'sticky' => TRUE,
-					'empty' => t('No records.'),
-				)
-			);
-	
-	//Append pager
-	$html .= theme('pager',
-				array(
-					'tags' => array()
-				)
-			);
-			
-	return $html;
-  
-}
-
-function elobbyist_contacts_grid_data($type, &$header) {  
-  //invoke hook_elobbyist_contact_grid to allow a different data source
-  //example of how the module could be extended to use CRM modules
-  /*$results = module_invoke_all('elobbyist_contact_rows', $header, array('type' => $type));
-
-  if ($results)
-    return $results;*/
-  
-  //Create the Sql query
-	$query = db_select('elobbyist_contact', 'c');
-  
-  $provider_alias = 'p';
-  
-  if ($type == 'subscriber') {
-    $provider_alias = $query->leftJoin('elobbyist_email_provider' ,$provider_alias, '%alias.providerid = c.providerid');
-  }
-
-	$query = $query->condition('type', $type)
-				->extend('PagerDefault') 	//Pager Extender
-					->limit(variable_get('elobbyist_records_per_page', ELOBBYIST_DEFAULT_RECORDS_PER_PAGE))				//results per page
-				->extend('TableSort')		//Sorting Extender
-					->orderByHeader($header);//Field to sort on is picked from $header
-  
-  $query = $query->fields ('c', array (
-                'cid',
-                'name',
-                'email',
-                'bounce',
-              )
-          );
-  
-  if ($type == 'subscriber') {    
-    $query->addField('c', 'stype');
-    $query->addField($provider_alias, 'name', 'provider_name');
-  }
-	
-	return $query->execute();
+  return l(t('Add new recipient'), 'elobbyist/recipients/add/recipient') .
+    views_embed_view('elobbyist_recipients');
 }
 
 /*
