@@ -338,6 +338,17 @@ function elobbyist_menu() {
     'type' => MENU_LOCAL_TASK,
     'file' => 'includes/contact.pages.inc',
   ); 
+  
+  $items['elobbyist/contact/%elobbyist_contact/emails'] = array(
+    'title' => 'Emails',
+    'page callback' => 'elobbyist_contact_emails',
+    'page arguments' => array(2),
+    'access arguments' => array('view email lobbyist activities'),
+    'weight' => 10,
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'includes/contact.pages.inc',
+  );
+
 
   $items['elobbyist/contact/%elobbyist_contact/delete'] = array(
     'title' => 'Delete',
@@ -544,6 +555,14 @@ function elobbyist_menu() {
     'access arguments' => array('view email lobbyist published pages'),
     'weight' => -10,
     'file' => 'includes/contact.pages.inc',
+  );
+  
+  $items['elobbyist/activity/%elobbyist_activity'] = array(
+    'title' => 'Activity',
+    'page callback' => 'elobbyist_activity_page_view',
+    'page arguments' => array(2),
+    'access arguments' => array('view email lobbyist activities'),
+    'file' => 'includes/activity.pages.inc',
   );
 
   return $items;
@@ -1509,6 +1528,26 @@ function elobbyist_get_notify_subject() {
     return $subject;
   }
   return t('Email sent on your behalf: [elobbyist:subject]');
+}
+
+function elobbyist_template_to_email_body($body, $sender, $recipient) {
+  return str_replace(
+        array('[elobbyist:sender]',
+              '[elobbyist:recipient]'),
+        array($sender,
+              $recipient),
+        $body
+      );
+}
+
+function elobbyist_template_to_email_subject($subject, $sender, $recipient) {
+  return str_replace(
+        array('[elobbyist:sender]',
+              '[elobbyist:recipient]'),
+        array($sender,
+              $recipient),
+        $subject
+      );
 }
 
 /*

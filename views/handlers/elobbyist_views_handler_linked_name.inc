@@ -42,9 +42,17 @@ class elobbyist_views_handler_linked_name extends views_handler_field {
    */
   function render_link($data, $values) {
     if (!empty($this->options['link_to_record'])) {
-      if ($data !== NULL && $data !== '' && isset($this->view->field) && isset($this->view->field[$this->view->base_field])) {
+      $fieldval = NULL;
+      if (isset($this->definition['id field']) && isset($this->view->field[$this->definition['id field']])) {
+        $fieldname = $this->view->field[$this->definition['id field']]->field_alias;
+        $fieldval = $values->$fieldname;
+      }
+      else {
+        $fieldval = $this->view->field[$this->view->base_field]->original_value;
+      }
+      if (!empty($data) && !empty($fieldval)) {
         $this->options['alter']['make_link'] = TRUE;
-        $this->options['alter']['path'] = str_replace('%', $this->view->field[$this->view->base_field]->original_value, 
+        $this->options['alter']['path'] = str_replace('%', $fieldval, 
           $this->definition['url']);
       }
       else {

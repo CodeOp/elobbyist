@@ -640,6 +640,30 @@ function elobbyist_contact_page_view($entity, $view_mode = 'full') {
   return $entity->content;
 }
 
+function elobbyist_contact_emails($entity, $view_mode = 'full') {
+  drupal_set_title(t('@contact\'s Emails', array('@contact' => $entity->name)));
+ 
+  $view = NULL;
+  if ($entity->type == 'subscriber') {
+    $view = views_get_view('elobbyist_activities_by_subscriber');
+    
+    $filter_by_contact = $view->get_item('default', 'filter', 'fromcid');
+    $filter_by_contact['value'] = $entity->cid;
+
+    $view->set_item('default', 'filter', 'fromcid', $filter_by_contact);
+  }
+  else {
+    $view = views_get_view('elobbyist_activities_by_recipient');
+    
+    $filter_by_contact = $view->get_item('default', 'filter', 'tocid');
+    $filter_by_contact['value'] = $entity->cid;
+
+    $view->set_item('default', 'filter', 'tocid', $filter_by_contact);
+  }
+
+  return $view->execute_display('default');
+}
+
 /*
  * Add record page callback
  */

@@ -158,13 +158,8 @@ class ElobbyistCronTaskMailing {
         return FALSE;
       $ep = current($eps);
       
-      $Body = str_replace(
-        array('[elobbyist:sender]',
-              '[elobbyist:recipient]'),
-        array($Sender->name,
-              $Recipient->name),
-        $this->Mailing->body
-      );
+      $Body = elobbyist_template_to_email_body($this->Mailing->body, $Sender->name,
+              $Recipient->name);
       
       // Build the default headers
       $message = array();
@@ -175,13 +170,9 @@ class ElobbyistCronTaskMailing {
       );
 
       //subject is in the headers in this mail function, so copy it
-      $message['headers']['Subject'] = str_replace(
-        array('[elobbyist:sender]',
-              '[elobbyist:recipient]'),
-        array($Sender->name,
-              $Recipient->name),
-        $this->Mailing->subject
-      );
+      $message['headers']['Subject'] = elobbyist_template_to_email_subject(
+        $this->Mailing->subject, $Sender->name, $Recipient->name );
+
       
       $message['headers']['From'] = $message['headers']['Sender'] = $message['headers']['Return-Path'] = $Sender->email;
       $message['headers']['To'] = $Recipient->email;
