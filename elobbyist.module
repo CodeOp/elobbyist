@@ -533,7 +533,18 @@ function elobbyist_menu() {
     'page callback' => 'elobbyist_mailing_action_page_edit',
     'page arguments' => array(2),
     'access arguments' => array('edit email lobbyist mailings'),
-    'weight' => 0,
+    'weight' => 10,
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'includes/mailing.pages.inc',
+  );
+  
+  
+  $items['elobbyist/mailing/%elobbyist_mailing/emails'] = array(
+    'title' => 'Sent Emails',
+    'page callback' => 'elobbyist_mailing_sent_emails_page',
+    'page arguments' => array(2),
+    'access arguments' => array('view email lobbyist activities'),
+    'weight' => 20,
     'type' => MENU_LOCAL_TASK,
     'file' => 'includes/mailing.pages.inc',
   );

@@ -521,6 +521,20 @@ function elobbyist_mailing_page_view($entity, $view_mode = 'full') {
   return $entity->content;
 }
 
+function elobbyist_mailing_sent_emails_page($entity, $view_mode = 'full') {
+  drupal_set_title(t('@mailing\'s Emails', array('@mailing' => $entity->name)));
+ 
+  $view = views_get_view('elobbyist_activities_by_mailing');
+
+  $filter_by_mailing = $view->get_item('default', 'filter', 'mid');
+  $filter_by_mailing['value'] = $entity->mid;
+
+  $view->set_item('default', 'filter', 'mid', $filter_by_mailing);
+
+
+  return $view->execute_display('default');
+}
+
 /*
  * Edit the mailing page field - only if mailing is of schedule type 'on-going' and status active or draft
  * On simple run mailing: display message. On closed/cancelled: show the content without editing

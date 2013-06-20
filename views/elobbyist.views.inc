@@ -1314,7 +1314,6 @@ function elobbyist_views_default_views() {
 
   $views[$view->name] = $view;
   
-  
   //-----------------------
   //----------------------- Subscribers Groups
   //-----------------------
@@ -1409,7 +1408,6 @@ function elobbyist_views_default_views() {
   $handler->display->display_options['filters']['type']['value'] = 'subscribers';
 
   $views[$view->name] = $view;
-
   
   //-----------------------
   //----------------------- Recipients Groups
@@ -1746,13 +1744,13 @@ function elobbyist_views_default_views() {
   $handler->display->display_options['fields']['start']['table'] = 'elobbyist_mailing';
   $handler->display->display_options['fields']['start']['field'] = 'start';
   $handler->display->display_options['fields']['start']['date_format'] = 'custom';
-  $handler->display->display_options['fields']['start']['custom_date_format'] = 'Y-m-d';
+  $handler->display->display_options['fields']['start']['custom_date_format'] = 'Y-m-d G:i';
   /* Field: Elobbyist Mailing: End */
   $handler->display->display_options['fields']['end']['id'] = 'end';
   $handler->display->display_options['fields']['end']['table'] = 'elobbyist_mailing';
   $handler->display->display_options['fields']['end']['field'] = 'end';
   $handler->display->display_options['fields']['end']['date_format'] = 'custom';
-  $handler->display->display_options['fields']['end']['custom_date_format'] = 'Y-m-d';
+  $handler->display->display_options['fields']['end']['custom_date_format'] = 'Y-m-d G:i';
   /* Field: Elobbyist Mailing: Edit */
   $handler->display->display_options['fields']['edit_link']['id'] = 'edit_link';
   $handler->display->display_options['fields']['edit_link']['table'] = 'elobbyist_mailing';
@@ -2142,32 +2140,20 @@ function elobbyist_views_default_views() {
   $handler->display->display_options['style_plugin'] = 'table';
   $handler->display->display_options['style_options']['columns'] = array(
     'aid' => 'aid',
-    'view_link' => 'view_link',
-    'created' => 'created',
     'name' => 'name',
     'email' => 'email',
     'subject' => 'subject',
     'mailing_name' => 'mailing_name',
     'mid' => 'mid',
     'tid' => 'tid',
+    'view_link' => 'view_link',
+    'created' => 'created',
   );
   $handler->display->display_options['style_options']['default'] = 'created';
   $handler->display->display_options['style_options']['info'] = array(
     'aid' => array(
       'sortable' => 1,
       'default_sort_order' => 'asc',
-      'align' => '',
-      'separator' => '',
-      'empty_column' => 0,
-    ),
-    'view_link' => array(
-      'align' => '',
-      'separator' => '',
-      'empty_column' => 0,
-    ),
-    'created' => array(
-      'sortable' => 1,
-      'default_sort_order' => 'desc',
       'align' => '',
       'separator' => '',
       'empty_column' => 0,
@@ -2196,6 +2182,18 @@ function elobbyist_views_default_views() {
     'mailing_name' => array(
       'sortable' => 1,
       'default_sort_order' => 'asc',
+      'align' => '',
+      'separator' => '',
+      'empty_column' => 0,
+    ),
+    'view_link' => array(
+      'align' => '',
+      'separator' => '',
+      'empty_column' => 0,
+    ),
+    'created' => array(
+      'sortable' => 1,
+      'default_sort_order' => 'desc',
       'align' => '',
       'separator' => '',
       'empty_column' => 0,
@@ -2241,18 +2239,7 @@ function elobbyist_views_default_views() {
   $handler->display->display_options['fields']['cid']['field'] = 'cid';
   $handler->display->display_options['fields']['cid']['relationship'] = 'tocid';
   $handler->display->display_options['fields']['cid']['exclude'] = TRUE;
-  /* Field: Elobbyist Activity: View */
-  $handler->display->display_options['fields']['view_link']['id'] = 'view_link';
-  $handler->display->display_options['fields']['view_link']['table'] = 'elobbyist_activity';
-  $handler->display->display_options['fields']['view_link']['field'] = 'view_link';
-  $handler->display->display_options['fields']['view_link']['label'] = t('View Email');
-  /* Field: Elobbyist Activity: Created */
-  $handler->display->display_options['fields']['created']['id'] = 'created';
-  $handler->display->display_options['fields']['created']['table'] = 'elobbyist_activity';
-  $handler->display->display_options['fields']['created']['field'] = 'created';
-  $handler->display->display_options['fields']['created']['label'] = t('Date');
-  $handler->display->display_options['fields']['created']['date_format'] = 'custom';
-  $handler->display->display_options['fields']['created']['custom_date_format'] = 'Y-m-d';
+  
   /* Field: Elobbyist Contact: Name */
   $handler->display->display_options['fields']['name']['id'] = 'name';
   $handler->display->display_options['fields']['name']['table'] = 'elobbyist_contact';
@@ -2274,6 +2261,19 @@ function elobbyist_views_default_views() {
   $handler->display->display_options['fields']['mailing_name']['field'] = 'name';
   $handler->display->display_options['fields']['mailing_name']['relationship'] = 'mid';
   $handler->display->display_options['fields']['mailing_name']['label'] = t('Mailing');
+  
+  /* Field: Elobbyist Activity: View */
+  $handler->display->display_options['fields']['view_link']['id'] = 'view_link';
+  $handler->display->display_options['fields']['view_link']['table'] = 'elobbyist_activity';
+  $handler->display->display_options['fields']['view_link']['field'] = 'view_link';
+  $handler->display->display_options['fields']['view_link']['label'] = t('View Email');
+  /* Field: Elobbyist Activity: Created */
+  $handler->display->display_options['fields']['created']['id'] = 'created';
+  $handler->display->display_options['fields']['created']['table'] = 'elobbyist_activity';
+  $handler->display->display_options['fields']['created']['field'] = 'created';
+  $handler->display->display_options['fields']['created']['label'] = t('Sent');
+  $handler->display->display_options['fields']['created']['date_format'] = 'custom';
+  $handler->display->display_options['fields']['created']['custom_date_format'] = 'Y-m-d G:i';
   /* Field: Elobbyist Activity: Mailing id */
   $handler->display->display_options['fields']['mid']['id'] = 'mid';
   $handler->display->display_options['fields']['mid']['table'] = 'elobbyist_activity';
@@ -2318,12 +2318,12 @@ function elobbyist_views_default_views() {
   $handler->display->display_options['style_plugin'] = 'table';
   $handler->display->display_options['style_options']['columns'] = array(
     'aid' => 'aid',
-    'view_link' => 'view_link',
-    'created' => 'created',
     'name' => 'name',
     'email' => 'email',
     'subject' => 'subject',
     'mailing_name' => 'mailing_name',
+    'view_link' => 'view_link',
+    'created' => 'created',
     'mid' => 'mid',
     'tid' => 'tid',
   );
@@ -2332,18 +2332,6 @@ function elobbyist_views_default_views() {
     'aid' => array(
       'sortable' => 1,
       'default_sort_order' => 'asc',
-      'align' => '',
-      'separator' => '',
-      'empty_column' => 0,
-    ),
-    'view_link' => array(
-      'align' => '',
-      'separator' => '',
-      'empty_column' => 0,
-    ),
-    'created' => array(
-      'sortable' => 1,
-      'default_sort_order' => 'desc',
       'align' => '',
       'separator' => '',
       'empty_column' => 0,
@@ -2372,6 +2360,18 @@ function elobbyist_views_default_views() {
     'mailing_name' => array(
       'sortable' => 1,
       'default_sort_order' => 'asc',
+      'align' => '',
+      'separator' => '',
+      'empty_column' => 0,
+    ),
+    'view_link' => array(
+      'align' => '',
+      'separator' => '',
+      'empty_column' => 0,
+    ),
+    'created' => array(
+      'sortable' => 1,
+      'default_sort_order' => 'desc',
       'align' => '',
       'separator' => '',
       'empty_column' => 0,
@@ -2417,18 +2417,7 @@ function elobbyist_views_default_views() {
   $handler->display->display_options['fields']['cid']['field'] = 'cid';
   $handler->display->display_options['fields']['cid']['relationship'] = 'fromcid';
   $handler->display->display_options['fields']['cid']['exclude'] = TRUE;
-  /* Field: Elobbyist Activity: View */
-  $handler->display->display_options['fields']['view_link']['id'] = 'view_link';
-  $handler->display->display_options['fields']['view_link']['table'] = 'elobbyist_activity';
-  $handler->display->display_options['fields']['view_link']['field'] = 'view_link';
-  $handler->display->display_options['fields']['view_link']['label'] = t('View Email');
-  /* Field: Elobbyist Activity: Created */
-  $handler->display->display_options['fields']['created']['id'] = 'created';
-  $handler->display->display_options['fields']['created']['table'] = 'elobbyist_activity';
-  $handler->display->display_options['fields']['created']['field'] = 'created';
-  $handler->display->display_options['fields']['created']['label'] = t('Date');
-  $handler->display->display_options['fields']['created']['date_format'] = 'custom';
-  $handler->display->display_options['fields']['created']['custom_date_format'] = 'Y-m-d';
+  
   /* Field: Elobbyist Contact: Name */
   $handler->display->display_options['fields']['name']['id'] = 'name';
   $handler->display->display_options['fields']['name']['table'] = 'elobbyist_contact';
@@ -2450,6 +2439,19 @@ function elobbyist_views_default_views() {
   $handler->display->display_options['fields']['mailing_name']['field'] = 'name';
   $handler->display->display_options['fields']['mailing_name']['relationship'] = 'mid';
   $handler->display->display_options['fields']['mailing_name']['label'] = t('Mailing');
+  
+  /* Field: Elobbyist Activity: View */
+  $handler->display->display_options['fields']['view_link']['id'] = 'view_link';
+  $handler->display->display_options['fields']['view_link']['table'] = 'elobbyist_activity';
+  $handler->display->display_options['fields']['view_link']['field'] = 'view_link';
+  $handler->display->display_options['fields']['view_link']['label'] = t('View Email');
+  /* Field: Elobbyist Activity: Created */
+  $handler->display->display_options['fields']['created']['id'] = 'created';
+  $handler->display->display_options['fields']['created']['table'] = 'elobbyist_activity';
+  $handler->display->display_options['fields']['created']['field'] = 'created';
+  $handler->display->display_options['fields']['created']['label'] = t('Sent');
+  $handler->display->display_options['fields']['created']['date_format'] = 'custom';
+  $handler->display->display_options['fields']['created']['custom_date_format'] = 'Y-m-d G:i';
   /* Field: Elobbyist Activity: Mailing id */
   $handler->display->display_options['fields']['mid']['id'] = 'mid';
   $handler->display->display_options['fields']['mid']['table'] = 'elobbyist_activity';
@@ -2467,6 +2469,213 @@ function elobbyist_views_default_views() {
   $handler->display->display_options['filters']['tocid']['value']['value'] = '0';
 
   $views[$view->name] = $view;
+  
+  //-----------------------
+  //----------------------- Activities By Mailing
+  //-----------------------  
+  
+  $view = new view();
+  $view->name = 'elobbyist_activities_by_mailing';
+  $view->description = '';
+  $view->tag = 'default';
+  $view->base_table = 'elobbyist_activity';
+  $view->human_name = t('Email Lobbyist Activities By Mailing');
+  $view->core = 7;
+  $view->api_version = '3.0';
+  $view->disabled = FALSE; /* Edit this to true to make a default view disabled initially */
+
+  /* Display: Master */
+  $handler = $view->new_display('default', 'Master', 'default');
+  $handler->display->display_options['use_more_always'] = FALSE;
+  $handler->display->display_options['access']['type'] = 'none';
+  $handler->display->display_options['cache']['type'] = 'none';
+  $handler->display->display_options['query']['type'] = 'views_query';
+  $handler->display->display_options['exposed_form']['type'] = 'basic';
+  $handler->display->display_options['pager']['type'] = 'full';
+  $handler->display->display_options['pager']['options']['items_per_page'] = $items_per_page;
+  $handler->display->display_options['style_plugin'] = 'table';
+  $handler->display->display_options['style_options']['columns'] = array(
+    'aid' => 'aid',
+    'name' => 'name',
+    'email' => 'email',
+    'recipient_name' => 'recipient_name',
+    'recipient_email' => 'recipient_email',
+    'subject' => 'subject',
+    'view_link' => 'view_link',
+    'created' => 'created',
+    'mid' => 'mid',
+    'tid' => 'tid',
+  );
+  $handler->display->display_options['style_options']['default'] = 'created';
+  $handler->display->display_options['style_options']['info'] = array(
+    'aid' => array(
+      'sortable' => 1,
+      'default_sort_order' => 'asc',
+      'align' => '',
+      'separator' => '',
+      'empty_column' => 0,
+    ),
+    'name' => array(
+      'sortable' => 1,
+      'default_sort_order' => 'asc',
+      'align' => '',
+      'separator' => '',
+      'empty_column' => 0,
+    ),
+    'email' => array(
+      'sortable' => 1,
+      'default_sort_order' => 'asc',
+      'align' => '',
+      'separator' => '',
+      'empty_column' => 0,
+    ),
+    'recipient_name' => array(
+      'sortable' => 1,
+      'default_sort_order' => 'asc',
+      'align' => '',
+      'separator' => '',
+      'empty_column' => 0,
+    ),
+    'recipient_email' => array(
+      'sortable' => 1,
+      'default_sort_order' => 'asc',
+      'align' => '',
+      'separator' => '',
+      'empty_column' => 0,
+    ),
+    'subject' => array(
+      'sortable' => 1,
+      'default_sort_order' => 'asc',
+      'align' => '',
+      'separator' => '',
+      'empty_column' => 0,
+    ),
+    'view_link' => array(
+      'align' => '',
+      'separator' => '',
+      'empty_column' => 0,
+    ),
+    'created' => array(
+      'sortable' => 1,
+      'default_sort_order' => 'desc',
+      'align' => '',
+      'separator' => '',
+      'empty_column' => 0,
+    ),
+    'mid' => array(
+      'sortable' => 1,
+      'default_sort_order' => 'asc',
+      'align' => '',
+      'separator' => '',
+      'empty_column' => 0,
+    ),
+    'tid' => array(
+      'sortable' => 1,
+      'default_sort_order' => 'asc',
+      'align' => '',
+      'separator' => '',
+      'empty_column' => 0,
+    ),
+  );
+  /* Relationship: Elobbyist Activity: Mailing */
+  $handler->display->display_options['relationships']['mid']['id'] = 'mid';
+  $handler->display->display_options['relationships']['mid']['table'] = 'elobbyist_activity';
+  $handler->display->display_options['relationships']['mid']['field'] = 'mid';
+  $handler->display->display_options['relationships']['mid']['required'] = TRUE;
+  /* Relationship: Elobbyist Activity: Template */
+  $handler->display->display_options['relationships']['tid']['id'] = 'tid';
+  $handler->display->display_options['relationships']['tid']['table'] = 'elobbyist_activity';
+  $handler->display->display_options['relationships']['tid']['field'] = 'tid';
+  /* Relationship: Elobbyist Activity: From */
+  $handler->display->display_options['relationships']['fromcid']['id'] = 'fromcid';
+  $handler->display->display_options['relationships']['fromcid']['table'] = 'elobbyist_activity';
+  $handler->display->display_options['relationships']['fromcid']['field'] = 'fromcid';
+  $handler->display->display_options['relationships']['fromcid']['label'] = 'fromcid';
+  $handler->display->display_options['relationships']['fromcid']['required'] = TRUE;
+  /* Relationship: Elobbyist Activity: To */
+  $handler->display->display_options['relationships']['tocid']['id'] = 'tocid';
+  $handler->display->display_options['relationships']['tocid']['table'] = 'elobbyist_activity';
+  $handler->display->display_options['relationships']['tocid']['field'] = 'tocid';
+  $handler->display->display_options['relationships']['tocid']['label'] = 'tocid';
+  $handler->display->display_options['relationships']['tocid']['required'] = TRUE;
+  /* Field: Elobbyist Activity: Activity id */
+  $handler->display->display_options['fields']['aid']['id'] = 'aid';
+  $handler->display->display_options['fields']['aid']['table'] = 'elobbyist_activity';
+  $handler->display->display_options['fields']['aid']['field'] = 'aid';
+  $handler->display->display_options['fields']['aid']['exclude'] = TRUE;
+  /* Field: Elobbyist Contact: Contact id */
+  $handler->display->display_options['fields']['cid']['id'] = 'cid';
+  $handler->display->display_options['fields']['cid']['table'] = 'elobbyist_contact';
+  $handler->display->display_options['fields']['cid']['field'] = 'cid';
+  $handler->display->display_options['fields']['cid']['relationship'] = 'fromcid';
+  $handler->display->display_options['fields']['cid']['exclude'] = TRUE;
+  /* Field: Elobbyist Contact: Contact id */
+  $handler->display->display_options['fields']['cid_1']['id'] = 'cid_1';
+  $handler->display->display_options['fields']['cid_1']['table'] = 'elobbyist_contact';
+  $handler->display->display_options['fields']['cid_1']['field'] = 'cid';
+  $handler->display->display_options['fields']['cid_1']['relationship'] = 'tocid';
+  $handler->display->display_options['fields']['cid_1']['exclude'] = TRUE;
+  
+  /* Field: Elobbyist Contact: Name */
+  $handler->display->display_options['fields']['name']['id'] = 'name';
+  $handler->display->display_options['fields']['name']['table'] = 'elobbyist_contact';
+  $handler->display->display_options['fields']['name']['field'] = 'name';
+  $handler->display->display_options['fields']['name']['relationship'] = 'fromcid';
+  $handler->display->display_options['fields']['name']['label'] = t('Sender');
+  /* Field: Elobbyist Contact: Email */
+  $handler->display->display_options['fields']['email']['id'] = 'email';
+  $handler->display->display_options['fields']['email']['table'] = 'elobbyist_contact';
+  $handler->display->display_options['fields']['email']['field'] = 'email';
+  $handler->display->display_options['fields']['email']['relationship'] = 'fromcid';
+  $handler->display->display_options['fields']['email']['label'] = t('From');
+  /* Field: Elobbyist Contact: Name */
+  $handler->display->display_options['fields']['recipient_name']['id'] = 'recipient_name';
+  $handler->display->display_options['fields']['recipient_name']['table'] = 'elobbyist_contact';
+  $handler->display->display_options['fields']['recipient_name']['field'] = 'name';
+  $handler->display->display_options['fields']['recipient_name']['relationship'] = 'tocid';
+  $handler->display->display_options['fields']['recipient_name']['label'] = t('Recipient');
+  /* Field: Elobbyist Contact: Email */
+  $handler->display->display_options['fields']['recipient_email']['id'] = 'recipient_email';
+  $handler->display->display_options['fields']['recipient_email']['table'] = 'elobbyist_contact';
+  $handler->display->display_options['fields']['recipient_email']['field'] = 'email';
+  $handler->display->display_options['fields']['recipient_email']['relationship'] = 'tocid';
+  $handler->display->display_options['fields']['recipient_email']['label'] = t('To');
+  /* Field: Elobbyist Template: Subject */
+  $handler->display->display_options['fields']['subject']['id'] = 'subject';
+  $handler->display->display_options['fields']['subject']['table'] = 'elobbyist_template';
+  $handler->display->display_options['fields']['subject']['field'] = 'subject';
+  
+  /* Field: Elobbyist Activity: View */
+  $handler->display->display_options['fields']['view_link']['id'] = 'view_link';
+  $handler->display->display_options['fields']['view_link']['table'] = 'elobbyist_activity';
+  $handler->display->display_options['fields']['view_link']['field'] = 'view_link';
+  $handler->display->display_options['fields']['view_link']['label'] = t('View Email');
+  /* Field: Elobbyist Activity: Created */
+  $handler->display->display_options['fields']['created']['id'] = 'created';
+  $handler->display->display_options['fields']['created']['table'] = 'elobbyist_activity';
+  $handler->display->display_options['fields']['created']['field'] = 'created';
+  $handler->display->display_options['fields']['created']['label'] = t('Sent');
+  $handler->display->display_options['fields']['created']['date_format'] = 'custom';
+  $handler->display->display_options['fields']['created']['custom_date_format'] = 'Y-m-d G:i';
+
+  /* Field: Elobbyist Activity: Mailing id */
+  $handler->display->display_options['fields']['mid']['id'] = 'mid';
+  $handler->display->display_options['fields']['mid']['table'] = 'elobbyist_activity';
+  $handler->display->display_options['fields']['mid']['field'] = 'mid';
+  $handler->display->display_options['fields']['mid']['exclude'] = TRUE;
+  /* Field: Elobbyist Activity: Template id */
+  $handler->display->display_options['fields']['tid']['id'] = 'tid';
+  $handler->display->display_options['fields']['tid']['table'] = 'elobbyist_activity';
+  $handler->display->display_options['fields']['tid']['field'] = 'tid';
+  $handler->display->display_options['fields']['tid']['exclude'] = TRUE;
+  /* Filter criterion: Elobbyist Activity: Mailing id */
+  $handler->display->display_options['filters']['mid']['id'] = 'mid';
+  $handler->display->display_options['filters']['mid']['table'] = 'elobbyist_activity';
+  $handler->display->display_options['filters']['mid']['field'] = 'mid';
+  $handler->display->display_options['filters']['mid']['value']['value'] = '0';
+  
+  $views[$view->name] = $view;
+
 
   return $views;
 }
