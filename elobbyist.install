@@ -63,8 +63,6 @@ function elobbyist_enable() {
  * Implements hook_disable()
  */
 function elobbyist_disable() {
-  
-  
   $role = user_role_load_by_name('anonymous user');
   if (isset($role->rid)) {
     user_role_revoke_permissions($role->rid, array('view email lobbyist published pages'));
@@ -87,7 +85,7 @@ function elobbyist_disable() {
  * Implements hook_uninstall()
  */
 function elobbyist_uninstall() {
-  elobbyist_fields_dispose();  
+  elobbyist_fields_dispose();
   elobbyist_relations_dispose();
 }
 
@@ -168,6 +166,13 @@ function elobbyist_fields_initialize() {
     'field_name' => 'elobbyist_to',
     'type' => 'relation',
     'entity_types' => array('elobbyist_mailing'),
+  );
+  
+  //domain name
+  $fields[] = array(
+    'field_name' => 'elobbyist_domain',
+    'type' => 'elobbyist_domainname',
+    'cardinality' => FIELD_CARDINALITY_UNLIMITED,
   );
 
   // Create the fields if they don't exist
@@ -252,6 +257,25 @@ function elobbyist_fields_initialize() {
         ),
       ),
     );
+  
+  $instances[] = array(
+    'field_name' => 'elobbyist_domain',
+    'cardinality' => FIELD_CARDINALITY_UNLIMITED,
+    'entity_type' => 'elobbyist_email_provider',
+    'bundle' => 'elobbyist_email_provider',
+    'label' => t('Domain Names'),
+    'description' => t('Associates these domain names with the current email provider, allowing for auto-fill of provider according to email address in subscribers forms.'),
+    'widget' => array(
+        'type' => 'text_textfield',
+        'weight' => 50,
+      ),
+    'display' => array(
+      'default' => array(
+        'label' => 'hidden',
+        'type' => 'text_default',
+      ),
+     ),
+    );
 
   // Create field instances if they don't exist
   foreach ($instances as $instance) {
@@ -301,12 +325,19 @@ function elobbyist_relations_dispose() {
 function elobbyist_fields_dispose() {
    elobbyist_fields_delete_instances('elobbyist_contact');
    elobbyist_fields_delete_instances('elobbyist_mailing');
+   elobbyist_fields_delete_instances('elobbyist_email_provider');
 }
 
 function elobbyist_fields_delete_instances($entity_type) { 
   $instances = field_read_instances(array('entity_type' => $entity_type), array('include_inactive' => TRUE));
+  $fieldnames = array();
   foreach ($instances as $instance) {
-   field_delete_field($instance['field_name']);
+   field_delete_instance($instance); 
+   $fieldnames[$instance['field_name']] = 1; //create a unique list of fields
+  }
+  
+  foreach ($fieldnames as $fieldname => $val) {
+   field_delete_field($fieldname); 
   }
 }
 

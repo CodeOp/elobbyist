@@ -112,7 +112,7 @@ class ElobbyistCronTaskMailing {
       reset($this->To);
       $Recipient = current($this->To);
       $Body = NULL;
-      $Pass = decrypt($Sender->pass, array('base64' => TRUE));
+      $Pass = elobbyist_decrypt($Sender->pass);
       $RecipientEmailList = array();
       $RecipientNameList = array();
       
@@ -396,7 +396,7 @@ class ElobbyistCronTaskMailing {
     if (empty($this->NotificationSenderPass)) {
       return;
     }
-    $this->NotificationSenderPass=decrypt($this->NotificationSenderPass, array('base64' => TRUE));
+    $this->NotificationSenderPass=elobbyist_decrypt($this->NotificationSenderPass);
     
     $providerid = variable_get('elobbyist_sender_providerid');
     if (empty($providerid)) {

@@ -20,6 +20,7 @@ class ELobbyistContactController extends DrupalDefaultEntityController {
       'form' => NULL,
       'bounce' => NULL,
       'bounces' => NULL,
+      'pass' => NULL,
     );
   }
   

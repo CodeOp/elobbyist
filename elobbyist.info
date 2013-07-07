@@ -3,7 +3,10 @@ description = Mass lobby by email through subscribers' own email accounts
 core = 7.x
 package = Email Lobbyist
 php = 5.3
-configure = admin/config/content/elobbyist
+configure = elobbyist/settings
+
+; internal dependencies
+dependencies[] = elobbyist_domainname
 
 ; Contrib dependencies
 dependencies[] = relation
@@ -23,6 +26,8 @@ files[] = includes/mailing.controller.inc
 files[] = includes/activity.controller.inc
 files[] = includes/template.controller.inc
 files[] = includes/email_provider.controller.inc
+
+; Views handlers
 files[] = views/handlers/elobbyist_views_handler_list_field.inc
 files[] = views/handlers/elobbyist_views_handler_link.inc
 files[] = views/handlers/elobbyist_views_handler_linked_name.inc

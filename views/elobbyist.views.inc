@@ -1875,6 +1875,11 @@ function elobbyist_views_default_views() {
   $handler->display->display_options['fields']['delete_link']['id'] = 'delete_link';
   $handler->display->display_options['fields']['delete_link']['table'] = 'elobbyist_email_provider';
   $handler->display->display_options['fields']['delete_link']['field'] = 'delete_link';
+  /* Field: Email Lobbyist Email Provider: Domain Name */
+  $handler->display->display_options['fields']['elobbyist_domain']['id'] = 'elobbyist_domain';
+  $handler->display->display_options['fields']['elobbyist_domain']['table'] = 'field_data_elobbyist_domain';
+  $handler->display->display_options['fields']['elobbyist_domain']['field'] = 'elobbyist_domain';
+  $handler->display->display_options['fields']['elobbyist_domain']['label'] = 'Domain Names';
 
   $views[$view->name] = $view;
   

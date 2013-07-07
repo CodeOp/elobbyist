@@ -117,14 +117,21 @@ function elobbyist_settings_form() {
     '#description' => t('Subscriber\'s public form'),
     '#weight' => 5,
   );
-  
-  
+    
   $form['defaults']['elobbyist_notify_default_admin'] = array(
     '#type' => 'checkbox',
     '#title' => t('Notify on Emails Sent'),
     '#default_value' => variable_get('elobbyist_notify_default_admin', ELOBBYIST_DEFAULT_NOTIFY_ON_EMAILS_SENT_FOR_ADMIN_FORM),
     '#description' => t('Subscriber\'s admin form'),
-    '#weight' => 5,
+    '#weight' => 6,
+  );
+  
+  $form['defaults']['elobbyist_notify_default_block'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Notify on Emails Sent'),
+    '#default_value' => variable_get('elobbyist_notify_default_block', ELOBBYIST_DEFAULT_NOTIFY_ON_EMAILS_SENT_FOR_BLOCK),
+    '#description' => t('Subscription block called @name', array('@name' => t('Register Email Lobbyist new persistent subscribers'))),
+    '#weight' => 7,
   );
   
   $form['elobbyist_max_emails_per_batch'] = array(
@@ -285,7 +292,7 @@ function elobbyist_settings_form_set_values($form, $values) {
           continue; //don't delete password when not entered
         else { 
           ////encrypt password
-          $value_to_set = encrypt($value, array('base64' => TRUE));
+          $value_to_set = elobbyist_encrypt($value);
         }
         break;
       default:

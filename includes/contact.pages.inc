@@ -44,6 +44,18 @@ function elobbyist_contact_form($form, &$form_state, $contact) {
   );
     
   if ($contact->type == 'subscriber') {
+    
+    elobbyist_add_js_file('subscriber.js');
+    
+    $form['email']['#ajax'] = array(
+      'callback' => 'elobbyist_email_change_callback',
+      'wrapper' => 'email_change_div',
+      );
+    
+    $form['email_change_markup'] = array(
+      '#markup' => '<div id="email_change_div"></div>',
+      );
+                   
     //subscriber specific fields
     
     //password
@@ -161,114 +173,16 @@ function elobbyist_contact_form($form, &$form_state, $contact) {
   return $form;
 }
 
-/*
- * new contact public form callback
- * 
- */
-function elobbyist_contact_public_form($form, &$form_state, $entity, $contact) {  
-  $form['#id'] = 'elobbyist_contact-public-form';
-    
-  $form_state['elobbyist_mailing'] = $entity;
-  $form_state['elobbyist_contact'] = $contact;
-  
-  //display content as markup
-  
-  $form['content'] = $entity->content;
-  
-  if (isset($form_state['oldpass'])) {
-    //old password
-    $form['oldpass'] = array(
-      '#type' => 'password',
-      '#title' => t('Old Password'),
-      '#default_value' => '',
-      '#weight' => 1,
-      '#maxlength' => 64,
-      '#size' => 50,
-      '#description' => t('Your old email account password, as entered in this site.'),
-      '#required' => TRUE,
-      );
-  }
-        
-  // Set fields
-  $form['name'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Full Name'),
-    '#weight' => 2,
-    '#default_value' => $contact->name,
-    '#maxlength' => 100,
-    '#size' => 50,
-    '#required' => TRUE,
-  );
-  
-  $form['email'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Email'),
-    '#weight' => 3,
-    '#maxlength' => 254,
-    '#default_value' => $contact->email,
-    '#size' => 50,
-    '#required' => TRUE,
-    '#rules' => array('email'),
-  );
-
-  //password
-  $form['pass'] = array(
-    '#type' => 'password',
-    '#title' => t('Password'),
-    //never send back the password, so no default_value
-    '#default_value' => '',
-    '#weight' => 4,
-    '#maxlength' => 64,
-    '#size' => 50,
-    '#description' => t('Your email account password, so emails can be sent through your own mailbox.'),
-    '#required' => TRUE,
-    );
-
-  //provider
-  $form['providerid'] = array(
-    '#type' => 'select',
-    '#key_type' => 'associative',
-    '#title' => t('Email Provider'),
-    '#default_value' => $contact->providerid,
-    '#options' => array('' => '') + elobbyist_get_email_providers(),
-    '#weight' => 20,
-    '#description' => t('Select the Email provider for the email account.'),
-    '#required' => TRUE,
-  );
-  
-  $form['stype'] = array(
-    '#type' => 'checkbox',
-    '#default_value' => ($contact->stype == ELOBBYIST_SUBSCRIBER_TYPE_PERSISTENT),
-    '#title' => t('Auto-subscribe me to all other actions'),
-    '#weight' => 30,
-  );
-
-  $form['notify'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Notify me on each email sent'),
-    '#default_value' => $contact->notify,
-    '#weight' => 30,
-  );
-  
-  //Add the buttons
-  $form['buttons'] = array();
-  $form['buttons']['#weight'] = 100;
-  $form['buttons']['submit'] = array(
-    '#type' => 'submit',
-    '#value' => t('Send'),
-    '#weight' => 100,
-    '#submit' => array('elobbyist_contact_public_form_submit'),
-  );
-  
-  $form['#validate'][] = 'elobbyist_contact_public_form_validate';
-    
-  return $form;
-}
 
 /*
  * Validate function
  */
 function elobbyist_contact_form_validate($form, &$form_state) {
+  //skip iterations invoked by ajax
+  if (!isset($form_state['submitted']) || !$form_state['submitted'])  {
+    return;
+  }
+  
   $contact = $form_state['elobbyist_contact'];
   
   //verify that email is unique
@@ -276,7 +190,7 @@ function elobbyist_contact_form_validate($form, &$form_state) {
   
   //encrypt password
   if (isset($form_state['values']['pass'])) {
-    $contact->pass = encrypt($form_state['values']['pass'], array('base64' => TRUE));
+    $contact->pass = elobbyist_encrypt($form_state['values']['pass']);
     //do not store plain password from now on
     unset($form_state['values']['pass']);
   }
@@ -290,38 +204,6 @@ function elobbyist_contact_form_validate($form, &$form_state) {
   }
 }
 
-function elobbyist_contact_public_form_validate($form, &$form_state) {
-  $contact = $form_state['elobbyist_contact'];
-  $mailing = $form_state['elobbyist_mailing'];
-  
-  //encrypt password
-  if (isset($form_state['values']['pass'])) {
-    $contact->pass = encrypt($form_state['values']['pass'], array('base64' => TRUE));
-    //do not store plain password from now on
-    unset($form_state['values']['pass']);
-  }
-  
-  $contact->name = $form_state['values']['name'];
-  $contact->email = $form_state['values']['email'];
-  $contact->providerid = $form_state['values']['providerid'];
-  $contact->notify = $form_state['values']['notify'];
-
-  if (!empty($form_state['values']['stype'])) {
-    $contact->stype = ELOBBYIST_SUBSCRIBER_TYPE_PERSISTENT;
-  }
-  else {
-    $contact->stype = ELOBBYIST_SUBSCRIBER_TYPE_MAILING;
-    $contact->mid = $mailing->mid;
-  }
-
-  //merge/reject contact by email
-  elobbyist_contact_merge_by_email($contact, $form, $form_state);
-
-  //if there are errors, do not send back even encrypted password
-  if (form_get_errors()) {
-    $contact->pass = '';
-  }
-}
 
 /*
  * Save functions
@@ -364,7 +246,9 @@ function elobbyist_contact_form_submit($form, &$form_state) {
   $new_record = empty($entity->cid);
   
   // Save the contact.
-  $contact = elobbyist_contact_save($contact);
+  elobbyist_contact_save($contact);
+  //empty the password
+  
   $form_state['elobbyist_contact'] = $contact; //send back the contact, without password
   
   //if new record, call submit groups manually, because it needs the entity id
@@ -384,52 +268,7 @@ function elobbyist_contact_form_submit($form, &$form_state) {
   }
 }
 
-/*
- * Save the contact and add to addtogrpid group
- */
-function elobbyist_contact_public_form_submit($form, &$form_state) {
-  
-  if (isset($form_state['rebuild']) && $form_state['rebuild']) {
-    return;
-  }
-  
-  $mailing = $form_state['elobbyist_mailing'];
-  $contact = $form_state['elobbyist_contact'];
-  
-  $contact = elobbyist_contact_save($contact);
-  $form_state['elobbyist_contact'] = $contact; //send back the contact, without password
-  
-  if (!$contact) {
-    return;
-  };
-  
-  if (!empty($mailing->addtogrpid)) {
-    if (!relation_relation_exists(array(
-      array('entity_type' => 'elobbyist_contact', 'entity_id' => $contact->cid),
-      array('entity_type' => 'elobbyist_group', 'entity_id' => $mailing->addtogrpid), ), 'elobbyist_subscriber')) {
 
-      elobbyist_relations_create('elobbyist_contact', $contact->cid, 'elobbyist_group', $mailing->addtogrpid,
-          'elobbyist_subscriber');
-
-    }
-  }
-
-  if (!empty($mailing->successurl)) {
-    $form_state['redirect'] = $mailing->successurl;
-  }
-  else {
-    drupal_set_message(t('Success! Thank you for joining this action.'));
-  }
-}
-
-
-function elobbyist_contact_save($contact) {
-
-  $contact = entity_get_controller('elobbyist_contact')->save($contact);
-  //remove password after the save
-  $contact->pass = '';
-  return $contact;
-}
 
 
 /*
@@ -1092,72 +931,4 @@ function elobbyist_subscribers_grid() {
 function elobbyist_recipients_grid() {
   return l(t('Add new recipient'), 'elobbyist/recipients/add/recipient') .
     views_embed_view('elobbyist_recipients');
-}
-
-/*
- * merge/reject contact, if email already exists
- *  
- */
-function elobbyist_contact_merge_by_email(&$contact, &$form, &$form_state) {
-  
-  //load the contact data by email
-  $query = db_select('elobbyist_contact', 'c')
-    ->fields('c', array('cid', 'stype', 'pass', 'type'))
-    ->condition('email', $contact->email);
-    
-  $query = $query->execute();
-  
-  $row =  $query->fetchAssoc();
-
-  //if the email is not found - all well, do nothing and exit
-  if (!$row)
-    return TRUE;
-  
-  //if the email is found:
-  
-  //if type is different - meaning a subscriber is already listed as recipient: 
-  //don't allow the subscription, but don't reveal the reason
-  if ($contact->type != $row['type']) {
-    form_set_error('', t('There was an error in processing the subscription form. No email was sent.'));
-    return FALSE;
-  }
-  
-  //if the passwords are equal
-  if ($contact->pass == $row['pass']) {
-    //merge the data for save
-    $contact->cid =  $row['cid']; //most importantly add the cid value for a record update, and not a create
-    //make contacts "persistent" once it was selected
-    if ($contact->stype != ELOBBYIST_SUBSCRIBER_TYPE_PERSISTENT) {
-      $contact->stype = $row['stype'];
-    }
-    return TRUE;
-  }
-  else {
-    ////if the passwords are not equal, add an old password field (unless added - process it)
-    if (!isset($form_state['values']['oldpass'])) {
-      $form_state['rebuild'] = TRUE;
-      $form_state['oldpass'] = TRUE;
-      drupal_set_message(t('The email you have provided is already registered in this site, but with a different password. 
-        If that password is your old email account password, please provide it here. Otherwise, contact the site administrator.'), 'error');
-      return TRUE;
-    }
-    else {
-      $oldpass =encrypt($form_state['values']['oldpass'], array('base64' => TRUE));
-      unset($form_state['values']['oldpass']); //delete raw password from form_state
-      if ($oldpass == $row['pass']) {
-        unset($form['oldpass']);
-        //merge the data for save
-        $contact->cid =  $row['cid']; //most importantly add the cid value for a record update, and not a create
-        //make contacts "persistent" once it was selected
-        if ($contact->stype != ELOBBYIST_SUBSCRIBER_TYPE_PERSISTENT) {
-          $contact->stype = $row['stype'];
-        }
-        return TRUE;
-      }
-      else {
-        form_set_error('oldpass', t('Wrong old password value. Please try again or contact the site administrator.'));
-        return FALSE;
-      }
-    }
-  }
 }
