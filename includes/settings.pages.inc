@@ -361,7 +361,7 @@ function elobbyist_settings_form_restore_submit($form, &$form_state) {
 function elobbyist_settings_restore_confirm($form, &$form_state) {
   return confirm_form($form, 
     t('Are you sure you want to restore default settings for the module Email Lobbyist?'),
-    'admin/config/administration/elobbyist',
+    'elobbyist',
     t('This action cannot be undone'),
     t('Restore'),
     t('Cancel')

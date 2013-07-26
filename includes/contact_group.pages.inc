@@ -49,6 +49,13 @@ function elobbyist_group_form($form, &$form_state, $entity) {
     '#submit' => array('elobbyist_group_form_submit'),
   );
   
+  $form['buttons']['save_and_add'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save and Add'),
+    '#weight' => 110,
+    '#submit' => array('elobbyist_group_form_submit', 'elobbyist_group_redirect_to_add'),
+  );
+  
   if (!$new_record) {
     $form['buttons']['delete'] = array(
       '#access' => user_access('delete email lobbyist contact groups'),
@@ -78,7 +85,7 @@ function elobbyist_group_add($type) {
     return MENU_NOT_FOUND;
   }
   
-  $entity = entity_get_controller('elobbyist_group')->create($type);
+  $entity = entity_get_controller('elobbyist_group')->create(array('type' => $type));
       
   drupal_set_title(t('New @name', array('@name' => $types[$type]->name)),
     PASS_THROUGH);
@@ -141,10 +148,17 @@ function elobbyist_group_page_title($entity) {
  */
 function elobbyist_group_form_validate($form, &$form_state) {
   $entity = $form_state['elobbyist_group'];
-    
+  
   //Field validation
   field_attach_form_validate('elobbyist_group', $entity, $form, $form_state);
+  
+  if (!form_get_errors()) {
+    //verify that name is unique
+    elobbyist_unique_field('elobbyist_group', $entity->grpid, 'grpid', 'name', 
+      $form_state['values']['name'], t('Group name'));
+  }
 }
+
 
 /*
  * Save functions
@@ -192,6 +206,13 @@ function elobbyist_group_save($entity) {
     $entity->grpid = check_url($cloned->grpid);
   
   return $entity;
+}
+
+function elobbyist_group_redirect_to_add($form, &$form_state) {
+  $entity = $form_state['elobbyist_group'];
+  
+  $type = $entity->type;
+  $form_state['redirect'] = "elobbyist/$type/groups/add";
 }
 
 
@@ -254,9 +275,8 @@ function elobbyist_contacts_groups_grid($type) {
   
   $types = elobbyist_group_types();
   drupal_set_title($types[$type]->plural);
-  
-  return l(t('Add new group'), 'elobbyist/' . $type . '/groups/add') .
-    views_embed_view('elobbyist_' . $type . '_groups');
+
+  return views_embed_view('elobbyist_' . $type . '_groups');
 }
 
 /*
@@ -277,5 +297,6 @@ function elobbyist_group_contacts_grid($entity) {
   $filter_by_group['value'] = $entity->grpid;
 
   $view->set_item('default', 'filter', 'grpid', $filter_by_group);
-  return $view->execute_display('default');
+  
+  return $view->preview('default', array());
 }

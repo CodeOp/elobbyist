@@ -1,15 +1,15 @@
 <?php
 
-class ELobbyistTemplateController extends DrupalDefaultEntityController {
+class ELobbyistTemplateController extends EntityAPIControllerExportable {
   
-  public function create() {
-    return (object)array(
+  public function create(array $values = array()) {
+    return (object)array_merge(array(
       'tid' => NULL,
       'name' => NULL,
       'subject' => NULL,
       'body' => NULL,
       'status' => ELOBBYIST_TEMPLATE_STATUS_DRAFT,
-    );
+    ),$values);
   }
   
   public function save($entity) {
@@ -93,4 +93,5 @@ class ELobbyistTemplateController extends DrupalDefaultEntityController {
     
     return TRUE;
   }
+  
 }

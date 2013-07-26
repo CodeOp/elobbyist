@@ -11,10 +11,17 @@
 function elobbyist_mailing_form($form, &$form_state, $entity) {
   // Set the id to identify this as a record edit form.
   $form['#id'] = 'elobbyist_mailing-form';
+  
+  drupal_add_css(drupal_get_path('module', 'elobbyist') . 
+    '/includes/elobbyist.css', array('type' => 'file'));
 
   // Save the record for later, in case we need it.
   $form['#elobbyist_mailing'] = $entity;
   $form_state['elobbyist_mailing'] = $entity;
+  
+  drupal_add_js(array('OnGoingSchedule' => ELOBBYIST_MAILING_SCHEDULE_ON_GOING), 'setting');
+  
+  elobbyist_add_js_file('mailing.js');
 
   // Set fields
   $form['name'] = array(
@@ -73,6 +80,8 @@ function elobbyist_mailing_form($form, &$form_state, $entity) {
     '#required' => FALSE,
     '#exclude_cv' => TRUE,
   );
+  
+  
 
   $form['schedule'] = array(
     '#type' => 'select',
@@ -81,13 +90,28 @@ function elobbyist_mailing_form($form, &$form_state, $entity) {
     '#weight' => 10,
     '#options' => elobbyist_mailing_schedule_type_list(),
     '#required' => TRUE,
+    '#attributes' => array(
+      'onchange' => 'JavaScript:OnScheduleChange();'
+      )
   );
+  
+  $cur_schedule = $entity->schedule;
+  if (isset($form_state['input']['schedule'])) {
+    $cur_schedule = $form_state['input']['schedule'];
+  }
   
   $form['ongoing'] = array(
     '#type' => 'fieldset',
     '#title' => t('On going schedule'),
     '#weight' => 11,
   );
+  
+  if ($cur_schedule == ELOBBYIST_MAILING_SCHEDULE_ON_GOING) {
+    $form['ongoing']['#attributes']['style'][] = 'display:block;';
+  }
+  else {
+    $form['ongoing']['#attributes']['style'][] = 'display:none;';
+  }
   
   if (!empty($entity->mid)) {
     $form['ongoing']['link'] = array(
@@ -145,6 +169,13 @@ function elobbyist_mailing_form($form, &$form_state, $entity) {
     '#value' => t('Save'),
     '#weight' => 100,
     '#submit' => array('elobbyist_mailing_form_submit'),
+  );
+  
+  $form['buttons']['save_and_add'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save and Add'),
+    '#weight' => 110,
+    '#submit' => array('elobbyist_mailing_form_submit', 'elobbyist_mailing_redirect_to_add'),
   );
   
   if (!empty($entity->mid)) {
@@ -210,6 +241,7 @@ function elobbyist_mailing_page_form($form, &$form_state, $entity) {
  * Validate form
  */
 function elobbyist_mailing_form_validate($form, &$form_state) {
+  
   $entity = $form_state['elobbyist_mailing'];
   
   $entity->name = $form_state['values']['name'];
@@ -261,6 +293,12 @@ function elobbyist_mailing_form_validate($form, &$form_state) {
   
   //Field validation
   field_attach_form_validate('elobbyist_mailing', $entity, $form, $form_state);
+  
+  if (!form_get_errors()) {
+    //verify that name is unique
+    elobbyist_unique_field('elobbyist_mailing', $entity->mid, 'mid', 'name', 
+      $form_state['values']['name'], t('Mailing name'));
+  }
 }
 
 
@@ -327,6 +365,10 @@ function elobbyist_mailing_page_form_submit($form, &$form_state) {
 
 function elobbyist_mailing_save($entity) {
   return entity_get_controller('elobbyist_mailing')->save($entity);
+}
+
+function elobbyist_mailing_redirect_to_add($form, &$form_state) {
+  $form_state['redirect'] = 'elobbyist/mailings/add';
 }
 
 /*
@@ -531,8 +573,15 @@ function elobbyist_mailing_sent_emails_page($entity, $view_mode = 'full') {
 
   $view->set_item('default', 'filter', 'mid', $filter_by_mailing);
 
+  return $view->preview('default', array());
+}
 
-  return $view->execute_display('default');
+function elobbyist_mailing_action_page_access_callback($entity, $perm) {
+  if ($entity->schedule != ELOBBYIST_MAILING_SCHEDULE_ON_GOING) {
+    return FALSE;
+  }
+  
+  return user_access($perm);
 }
 
 /*
@@ -597,13 +646,6 @@ function elobbyist_mailing_page_edit($entity) {
   return drupal_get_form('elobbyist_mailing_form', $entity);
 }
 
-/*
- * list mailings
- */
-function elobbyist_mailing_grid() {
-  return l(t('Add new mailing'), 'elobbyist/mailings/add') .
-    views_embed_view('elobbyist_mailings');
-}
 
 /*
  * Pull a list of templates from the database

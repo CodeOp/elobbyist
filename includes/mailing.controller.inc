@@ -1,9 +1,9 @@
 <?php
 
 
-class ELobbyistMailingController extends DrupalDefaultEntityController {
-  public function create() {
-    return (object)array(
+class ELobbyistMailingController extends EntityAPIControllerExportable {
+  public function create(array $values = array()) {
+    return (object)array_merge(array(
       'mid' => NULL,
       'name' => NULL,
       'tid' => NULL,
@@ -14,7 +14,7 @@ class ELobbyistMailingController extends DrupalDefaultEntityController {
       'end' => NULL,
       'successurl' => NULL,
       'addtogrpid' => NULL
-    );
+    ),$values);
   }
   
   public function save($entity) {
@@ -106,4 +106,6 @@ class ELobbyistMailingController extends DrupalDefaultEntityController {
     
     return TRUE;
   }
+  
+
 }

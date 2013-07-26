@@ -2,6 +2,16 @@
 
 class elobbyist_views_handler_link extends views_handler_field_url {
       
+  function init(&$view, &$options) {
+    parent:parent::init($view, $options);
+    
+    if (isset($this->definition['entity access'])) {
+      if (!entity_access($this->definition['entity access'], $view->base_table)) {
+        $this->options['exclude'] = 1;
+      }
+    }
+  }
+  
   function render($values) {
     $value = $this->get_value($values);
     if (isset($this->definition['url'])) {

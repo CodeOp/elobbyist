@@ -1,14 +1,14 @@
 <?php
 
-class ELobbyistContactGroupController extends DrupalDefaultEntityController {
+class ELobbyistContactGroupController extends EntityAPIControllerExportable {
   
-  public function create($type) {
-    return (object)array(
+  public function create(array $values = array()) {
+    return (object)array_merge(array(
       'grpid' => NULL,
       'name' => NULL,
       'status' => ELOBBYIST_GROUP_STATUS_ACTIVE,
-      'type' => $type,
-    );
+      'type' => NULL,
+    ), $values);
   }
   
   public function save($entity) {
@@ -93,4 +93,5 @@ class ELobbyistContactGroupController extends DrupalDefaultEntityController {
     
     return TRUE;
   }
+  
 }

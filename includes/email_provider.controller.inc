@@ -1,13 +1,13 @@
 <?php
 
-class ELobbyistEmailProviderController extends DrupalDefaultEntityController {
-  public function create() {
-    return (object)array(
+class ELobbyistEmailProviderController extends EntityAPIControllerExportable {
+  public function create(array $values = array()) {
+    return (object)array_merge(array(
       'providerid' => NULL,
       'name' => NULL,
       'smtphost' => NULL,
       'smtpport' => variable_get('elobbyist_smtp_port_default', ELOBBYIST_DEFAULT_SMTP_PORT),
-    );
+    ), $values);
   }
   
   public function save($entity) {
@@ -91,4 +91,5 @@ class ELobbyistEmailProviderController extends DrupalDefaultEntityController {
     
     return TRUE;
   }
+  
 }

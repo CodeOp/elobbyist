@@ -4,13 +4,13 @@
  * contact entity controller
  * 
  */
-class ELobbyistContactController extends DrupalDefaultEntityController {
+class ELobbyistContactController extends EntityAPIControllerExportable {
   
-  public function create($type = '') {
-    return (object)array(
+  public function create(array $values = array()) {
+    return (object)array_merge(array(
       'cid' => NULL,
       'mid' => NULL,
-      'type' => $type,
+      'type' => NULL,
       'name' => NULL,
       'email' => NULL,
       'stype' => NULL,
@@ -21,7 +21,7 @@ class ELobbyistContactController extends DrupalDefaultEntityController {
       'bounce' => NULL,
       'bounces' => NULL,
       'pass' => NULL,
-    );
+    ), $values);
   }
   
   public function save($contact) {
@@ -122,5 +122,5 @@ class ELobbyistContactController extends DrupalDefaultEntityController {
     
     return TRUE;
   }
-  
+    
 }

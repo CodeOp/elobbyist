@@ -12,6 +12,9 @@ function elobbyist_contact_form($form, &$form_state, $contact) {
   // Set the id to identify this as a contact edit form.
   $form['#id'] = 'elobbyist_contact-form';
   
+  drupal_add_css(drupal_get_path('module', 'elobbyist') . 
+    '/includes/elobbyist.css', array('type' => 'file'));
+    
   // Save the contact for later, in case we need it.
   $form_state['elobbyist_contact'] = $contact;
   
@@ -42,6 +45,7 @@ function elobbyist_contact_form($form, &$form_state, $contact) {
     '#required' => TRUE,
     '#rules' => array('email'),
   );
+  
     
   if ($contact->type == 'subscriber') {
     
@@ -137,9 +141,11 @@ function elobbyist_contact_form($form, &$form_state, $contact) {
     );    
   }
   
-  $form['elobbyist_contact_groups'] = array(
+  $relation_type = 'elobbyist_' . $contact->type;
+  
+  $form[$relation_type] = array(
       '#type' => 'elobbyist_contact_groups',
-      '#relation_type' => 'elobbyist_' . $contact->type,
+      '#relation_type' => $relation_type,
       '#title' => t('Groups'),
       '#weight' => 40,
       '#description' => t('Emails are only sent between groups.'),
@@ -153,6 +159,13 @@ function elobbyist_contact_form($form, &$form_state, $contact) {
     '#value' => t('Save'),
     '#weight' => 100,
     '#submit' => array('elobbyist_contact_form_submit'),
+  );
+  
+  $form['buttons']['save_and_add'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save and Add'),
+    '#weight' => 110,
+    '#submit' => array('elobbyist_contact_form_submit', 'elobbyist_contact_redirect_to_add'),
   );
   
   if (!$new_record) {
@@ -184,9 +197,7 @@ function elobbyist_contact_form_validate($form, &$form_state) {
   }
   
   $contact = $form_state['elobbyist_contact'];
-  
-  //verify that email is unique
-  elobbyist_contact_unique_email($contact->cid, $form_state['values']['email']);
+
   
   //encrypt password
   if (isset($form_state['values']['pass'])) {
@@ -197,6 +208,12 @@ function elobbyist_contact_form_validate($form, &$form_state) {
       
   //Field API validation
   field_attach_form_validate('elobbyist_contact', $contact, $form, $form_state);
+  
+  if (!form_get_errors()) {
+    //verify that email is unique
+    elobbyist_unique_field('elobbyist_contact', $contact->cid, 'cid', 'email', 
+      $form_state['values']['email'], t('Email address'));
+  }
   
   //if there are errors, do not send back even encrypted password
   if (form_get_errors()) {
@@ -268,7 +285,16 @@ function elobbyist_contact_form_submit($form, &$form_state) {
   }
 }
 
-
+function elobbyist_contact_redirect_to_add($form, &$form_state) {
+  $contact = $form_state['elobbyist_contact'];
+  
+  if ($contact->type == 'subscriber') {
+    $form_state['redirect'] = 'elobbyist/subscribers/add/subscriber';
+  }
+  else {
+    $form_state['redirect'] = 'elobbyist/recipients/add/recipient';
+  }
+}
 
 
 /*
@@ -500,7 +526,7 @@ function elobbyist_contact_emails($entity, $view_mode = 'full') {
     $view->set_item('default', 'filter', 'tocid', $filter_by_contact);
   }
 
-  return $view->execute_display('default');
+  return $view->preview('default', array());
 }
 
 /*
@@ -513,7 +539,7 @@ function elobbyist_contact_add($type) {
     return MENU_NOT_FOUND;
   }
   
-  $contact = entity_get_controller('elobbyist_contact')->create($type);
+  $contact = entity_get_controller('elobbyist_contact')->create(array('type' => $type));
   
   //set subscription type to persistent for subscribers
   if ($type == 'subscriber') {
@@ -616,12 +642,12 @@ function elobbyist_mailing_public_page($entity) {
   );
   
   if ($bSubscriptionForm) {
-    $contact = entity_get_controller('elobbyist_contact')->create('subscriber');
-    //default values
-    $contact->form = ELOBBYIST_FORM_PUBLIC;
-    $contact->notify = variable_get('elobbyist_notify_default_public', ELOBBYIST_DEFAULT_NOTIFY_ON_EMAILS_SENT_FOR_PUBLIC_FORM);  
-    $contact->bounce = ELOBBYIST_CONTACT_EMAIL_UNVERIFIED;
-    
+    $contact = entity_get_controller('elobbyist_contact')->create(array('type' => 'subscriber',
+      'form' => ELOBBYIST_FORM_PUBLIC,
+      'notify' => variable_get('elobbyist_notify_default_public', ELOBBYIST_DEFAULT_NOTIFY_ON_EMAILS_SENT_FOR_PUBLIC_FORM),
+      'bounce' => ELOBBYIST_CONTACT_EMAIL_UNVERIFIED
+      ));
+        
     return drupal_get_form('elobbyist_contact_public_form', $entity, $contact);
   }
   else {
@@ -875,30 +901,6 @@ function elobbyist_mailing_list($mid) {
   return $result;
 }
 
-/*
- * Validate that email is unique
- */
-function elobbyist_contact_unique_email($cid, $email) {
-  //Execute a count query to see if there's other similar values.
-  
-  $query = db_select('elobbyist_contact', 'c');
-  
-  $query->addExpression('COUNT(cid)', 'contact_count');
-  
-  $query->condition('email', $email);
-    
-  if (!empty($cid))
-        $query = $query->condition('cid', $cid, '<>');
-
-  $query = $query->execute();
-  
-  $col =  $query->fetchColumn();
-
-  if ($col > 0) {
-    form_set_error('email', t('Email address must be unique in the contacts table. @email is already in use for another contact.',
-      array('@email' => $email)));
-  }
-}
 
 function elobbyist_subscriber_by_handle(&$handle) {
   $query = db_select('elobbyist_contact', 'c')
@@ -915,20 +917,4 @@ function elobbyist_subscriber_by_handle(&$handle) {
     }
   }
   return FALSE;
-}
-
-/*
- * Display list of subscribers
- */
-function elobbyist_subscribers_grid() {
-  return l(t('Add new subscriber'), 'elobbyist/subscribers/add/subscriber') .
-    views_embed_view('elobbyist_subscribers');
-}
-
-/*
- * Display list of recipients
- */
-function elobbyist_recipients_grid() {
-  return l(t('Add new recipient'), 'elobbyist/recipients/add/recipient') .
-    views_embed_view('elobbyist_recipients');
 }

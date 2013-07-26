@@ -66,6 +66,13 @@ function elobbyist_template_form($form, &$form_state, $entity) {
     '#submit' => array('elobbyist_template_form_submit'),
   );
   
+  $form['buttons']['save_and_add'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save and Add'),
+    '#weight' => 110,
+    '#submit' => array('elobbyist_template_form_submit', 'elobbyist_template_redirect_to_add'),
+  );
+  
   if (!empty($entity->tid)) {
     $form['buttons']['delete'] = array(
       '#access' => user_access('delete email lobbyist templates'),
@@ -90,9 +97,15 @@ function elobbyist_template_form($form, &$form_state, $entity) {
  */
 function elobbyist_template_form_validate($form, &$form_state) {
   $entity = $form_state['elobbyist_template']; 
-  
+    
   //Field validation
   field_attach_form_validate('elobbyist_template', $entity, $form, $form_state);
+  
+  if (!form_get_errors()) {
+    //verify that name is unique
+    elobbyist_unique_field('elobbyist_template', $entity->tid, 'tid', 'name', 
+      $form_state['values']['name'], t('Template name'));
+  }
 }
 
 /**
@@ -128,6 +141,10 @@ function elobbyist_template_form_submit($form, &$form_state) {
 
 function elobbyist_template_save($entity) {
   return entity_get_controller('elobbyist_template')->save($entity);
+}
+
+function elobbyist_template_redirect_to_add($form, &$form_state) {
+  $form_state['redirect'] = 'elobbyist/templates/add';
 }
 
 /*
@@ -174,14 +191,6 @@ function elobbyist_template_delete_confirm_submit($form, &$form_state) {
   $form_state['redirect'] = 'elobbyist/templates';
 }
 
-
-/*
- * list templates
- */
-function elobbyist_template_grid() {
-  return l(t('Add new template'), 'elobbyist/templates/add') .
-    views_embed_view('elobbyist_templates');
-}
 
 /*
  * Add record page callback

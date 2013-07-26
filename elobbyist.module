@@ -30,9 +30,11 @@ function elobbyist_entity_info() {
       'controller class' => 'ELobbyistContactController',
       'base table' => 'elobbyist_contact',
       'uri callback' => 'elobbyist_contact_uri',
+      'access callback' => 'elobbyist_contact_access',
       'fieldable' => TRUE,
       'entity keys' => array(
         'id' => 'cid',
+        'label' => 'name',
         'bundle' => 'type',
       ),
       'bundle keys' => array(
@@ -53,9 +55,11 @@ function elobbyist_entity_info() {
     'controller class' => 'ELobbyistContactGroupController',
     'base table' => 'elobbyist_group',
     'uri callback' => 'elobbyist_group_uri',
+    'access callback' => 'elobbyist_contact_group_access',
     'fieldable' => TRUE,
     'entity keys' => array(
       'id' => 'grpid',
+      'label' => 'name',
       'bundle' => 'type',
     ),
     'bundle keys' => array(
@@ -76,9 +80,11 @@ function elobbyist_entity_info() {
     'controller class' => 'ELobbyistMailingController',
     'base table' => 'elobbyist_mailing',
     'uri callback' => 'elobbyist_mailing_uri',
+    'access callback' => 'elobbyist_mailing_access',
     'fieldable' => TRUE,
     'entity keys' => array(
       'id' => 'mid',
+      'label' => 'name',
     ),
     'static cache' => TRUE,
     'view modes' => array(
@@ -94,6 +100,7 @@ function elobbyist_entity_info() {
     'controller class' => 'ELobbyistActivityController',
     'base table' => 'elobbyist_activity',
     'uri callback' => 'elobbyist_activity_uri',
+    'access callback' => 'elobbyist_activity_access',
     'fieldable' => TRUE,
     'entity keys' => array(
       'id' => 'aid',
@@ -111,9 +118,11 @@ function elobbyist_entity_info() {
     'controller class' => 'ELobbyistTemplateController',
     'base table' => 'elobbyist_template',
     'uri callback' => 'elobbyist_template_uri',
+    'access callback' => 'elobbyist_template_access',
     'fieldable' => TRUE,
     'entity keys' => array(
       'id' => 'tid',
+      'label' => 'name',
     ),
     'static cache' => TRUE,
     'view modes' => array(
@@ -129,9 +138,11 @@ function elobbyist_entity_info() {
     'controller class' => 'ELobbyistEmailProviderController',
     'base table' => 'elobbyist_email_provider',
     'uri callback' => 'elobbyist_email_provider_uri',
+    'access callback' => 'elobbyist_email_provider_access',
     'fieldable' => TRUE,
     'entity keys' => array(
       'id' => 'providerid',
+      'label' => 'name',
     ),
     'static cache' => TRUE,
     'view modes' => array(
@@ -150,7 +161,7 @@ function elobbyist_entity_info() {
         'real path' => 'admin/structure/elobbyist/contacts/manage/' . 
         str_replace('_', '-', $type), //drupal path format
         'bundle argument' => 4,
-        'access arguments' => array('view email lobbyist contacts'),
+        'access callback' => 'elobbyist_contact_access',
       ),
     );
   }
@@ -163,7 +174,7 @@ function elobbyist_entity_info() {
         'real path' => 'admin/structure/elobbyist/contact_groups/manage/' . 
         str_replace('_', '-', $type), //drupal path format
         'bundle argument' => 4,
-        'access arguments' => array('view email lobbyist contact groups'),
+        'access callback' => 'elobbyist_contact_group_access',
       ),
     );
   }
@@ -181,7 +192,8 @@ function elobbyist_menu() {
       'title' => 'Email Lobbyist',
       'page callback' => 'elobbyist_main_page',
       'access arguments' => array('coordinate email lobbyist'),
-      'menu_name' => 'management',
+      'menu_name' => 'navigation',
+      'expanded' => TRUE,
       'weight' => variable_get('elobbyist_main_menu_weight', ELOBBYIST_DEFAULT_MAIN_MENU_WEIGHT),
     );
   
@@ -193,10 +205,11 @@ function elobbyist_menu() {
     'access arguments' => array('administer email lobbyist'),
     'type' => MENU_NORMAL_ITEM,
     'file' => 'includes/settings.pages.inc',
+    'expanded' => TRUE,
     'weight' => 1000,
   );
   
-  $items['admin/config/administration/elobbyist/restore'] = array(
+  $items['elobbyist/settings/restore'] = array(
     'title' => 'Restore defaults',
     'description' => 'Restore default configuration settings for Email Lobbyist module',
     'page callback' => 'drupal_get_form',
@@ -209,19 +222,21 @@ function elobbyist_menu() {
   //email_provider
   $items['elobbyist/email-providers'] = array(
       'title' => 'Email Providers',
-      'page callback' => 'elobbyist_email_provider_grid',
+      'page callback' => 'views_embed_view',
+      'page arguments' => array('elobbyist_providers'),
       'access arguments' => array('view email lobbyist email providers'),
-      'menu_name' => 'management',
+   //   'menu_name' => 'management',
+      'expanded' => TRUE,
       'weight' => 100,
       'file' => 'includes/email_provider.pages.inc',
     );
   
   $items['elobbyist/email-providers/add'] = array(
-      'title' => 'Add new email provider',
+      'title' => 'Add new', // email provider',
       'page callback' => 'elobbyist_email_provider_add',
       'access arguments' => array('create email lobbyist email providers'),
       'weight' => 1,
-      'menu_name' => 'management',
+   //   'menu_name' => 'management',
       'file' => 'includes/email_provider.pages.inc',
     );
   
@@ -248,37 +263,41 @@ function elobbyist_menu() {
   //contact
   $items['elobbyist/subscribers'] = array(
       'title' => 'Subscribers',
-      'page callback' => 'elobbyist_subscribers_grid',
+      'page callback' => 'views_embed_view',
+      'page arguments' => array('elobbyist_subscribers'),
       'access arguments' => array('view email lobbyist contacts'),
-      'menu_name' => 'management',
+   //   'menu_name' => 'management',
+      'expanded' => TRUE,
       'weight' => 1,
       'file' => 'includes/contact.pages.inc',
     );
   
   $items['elobbyist/recipients'] = array(
       'title' => 'Recipients',
-      'page callback' => 'elobbyist_recipients_grid',
+      'page callback' => 'views_embed_view',
+      'page arguments' => array('elobbyist_recipients'),
       'access arguments' => array('view email lobbyist contacts'),
-      'menu_name' => 'management',
+  //    'menu_name' => 'management',
+      'expanded' => TRUE,
       'weight' => 2,
       'file' => 'includes/contact.pages.inc',
     );
   
   $items['elobbyist/subscribers/add/subscriber'] = array(
-      'title' => 'Add new subscriber',
+      'title' => 'Add new', // subscriber',
       'page callback' => 'elobbyist_contact_add',
       'page arguments' => array(3),
       'access arguments' => array('create email lobbyist contacts'),
-      'menu_name' => 'management',
+   //   'menu_name' => 'management',
       'file' => 'includes/contact.pages.inc',
     );
   
   $items['elobbyist/recipients/add/recipient'] = array(
-      'title' => 'Add new recipient',
+      'title' => 'Add new', // recipient',
       'page callback' => 'elobbyist_contact_add',
       'page arguments' => array(3),
       'access arguments' => array('create email lobbyist contacts'),
-      'menu_name' => 'management',
+   //   'menu_name' => 'management',
       'file' => 'includes/contact.pages.inc',
     );
   
@@ -366,7 +385,8 @@ function elobbyist_menu() {
       'page callback' => 'elobbyist_contacts_groups_grid',
       'page arguments' => array(1),
       'access arguments' => array('view email lobbyist contact groups'),
-      'menu_name' => 'management',
+  //    'menu_name' => 'management',
+      'expanded' => TRUE,
       'weight' => 1,
       'file' => 'includes/contact_group.pages.inc',
     );
@@ -376,26 +396,27 @@ function elobbyist_menu() {
       'page callback' => 'elobbyist_contacts_groups_grid',
       'page arguments' => array(1),
       'access arguments' => array('view email lobbyist contact groups'),
-      'menu_name' => 'management',
+  //    'menu_name' => 'management',
+      'expanded' => TRUE,
       'weight' => 2,
       'file' => 'includes/contact_group.pages.inc',
     );
   
   $items['elobbyist/subscribers/groups/add'] = array(
-      'title' => 'Add new subscribers group',
+      'title' => 'Add new', // subscribers group',
       'page callback' => 'elobbyist_group_add',
       'page arguments' => array(1),
       'access arguments' => array('create email lobbyist contact groups'),
-      'menu_name' => 'management',
+   //   'menu_name' => 'management',
       'file' => 'includes/contact_group.pages.inc',
     );
   
   $items['elobbyist/recipients/groups/add'] = array(
-      'title' => 'Add new recipients group',
+      'title' => 'Add new', // recipients group',
       'page callback' => 'elobbyist_group_add',
       'page arguments' => array(1),
       'access arguments' => array('create email lobbyist contact groups'),
-      'menu_name' => 'management',
+   //   'menu_name' => 'management',
       'file' => 'includes/contact_group.pages.inc',
     );
   
@@ -424,6 +445,7 @@ function elobbyist_menu() {
     'file' => 'includes/contact_group.pages.inc',
   );
   
+  //NOTE changing this path structure affects elobbyist_rule_remove_contact_add_var arg() call
   $items['elobbyist/contact-group/%elobbyist_group/members'] = array(
     'title' => 'Members',
     'page callback' => 'elobbyist_group_contacts_grid',
@@ -448,19 +470,21 @@ function elobbyist_menu() {
   //template
   $items['elobbyist/templates'] = array(
       'title' => 'Email Templates',
-      'page callback' => 'elobbyist_template_grid',
+      'page callback' => 'views_embed_view',
+      'page arguments' => array('elobbyist_templates'),    
       'access arguments' => array('view email lobbyist templates'),
-      'menu_name' => 'management',
+  //    'menu_name' => 'management',
+      'expanded' => TRUE,
       'weight' => 70,
       'file' => 'includes/template.pages.inc',
     );
   
   $items['elobbyist/templates/add'] = array(
-      'title' => 'Add new email template',
+      'title' => 'Add new', // email template',
       'page callback' => 'elobbyist_template_add',
       'access arguments' => array('create email lobbyist templates'),
       'weight' => 1,
-      'menu_name' => 'management',
+ //     'menu_name' => 'management',
       'file' => 'includes/template.pages.inc',
     );
   
@@ -487,19 +511,21 @@ function elobbyist_menu() {
   //mailing
   $items['elobbyist/mailings'] = array(
       'title' => 'Mailings',
-      'page callback' => 'elobbyist_mailing_grid',
+      'page callback' => 'views_embed_view',
+      'page arguments' => array('elobbyist_mailings'),
       'access arguments' => array('view email lobbyist mailings'),
-      'menu_name' => 'management',
+  //    'menu_name' => 'management',
+      'expanded' => TRUE,
       'weight' => 70,
       'file' => 'includes/mailing.pages.inc',
     );
 
   $items['elobbyist/mailings/add'] = array(
-      'title' => 'Add new mailing',
+      'title' => 'Add new', // mailing',
       'page callback' => 'elobbyist_mailing_add',
       'access arguments' => array('create email lobbyist mailings'),
       'weight' => 1,
-      'menu_name' => 'management',
+  //    'menu_name' => 'management',
       'file' => 'includes/mailing.pages.inc',
     );
   
@@ -532,7 +558,8 @@ function elobbyist_menu() {
     'title' => 'Public call to action page',
     'page callback' => 'elobbyist_mailing_action_page_edit',
     'page arguments' => array(2),
-    'access arguments' => array('edit email lobbyist mailings'),
+    'access arguments' => array(2, 'edit email lobbyist mailings'),
+    'access callback' => 'elobbyist_mailing_action_page_access_callback',
     'weight' => 10,
     'type' => MENU_LOCAL_TASK,
     'file' => 'includes/mailing.pages.inc',
@@ -683,8 +710,231 @@ function elobbyist_permission() {
       'title' => t('View public pages'),
       'description' => t('This permission is granted by default to both the anonymous and authenticated roles.')
     ),
+    'view email lobbyist activities' => array(
+      'title' => t('View emails'),
+    ),
   );
 }
+
+/*
+ * Access Callbacks
+ */
+
+function elobbyist_contact_access($op, $entity = NULL, $account = NULL) {
+  $account = isset($account) ? $account : $GLOBALS['user'];
+
+  switch($op) {
+    case 'delete':
+      return user_access('delete email lobbyist contacts', $account);
+    case 'create':
+      return user_access('create email lobbyist contacts', $account);
+    case 'update':
+      return user_access('edit email lobbyist contacts', $account);
+    case 'view':
+      return user_access('view email lobbyist contacts', $account);
+    default:
+      return FALSE;
+  }
+}
+
+function elobbyist_email_provider_access($op, $entity = NULL, $account = NULL) {
+  $account = isset($account) ? $account : $GLOBALS['user'];
+
+  switch($op) {
+    case 'delete':
+      return user_access('delete email lobbyist providers', $account);
+    case 'create':
+      return user_access('create email lobbyist providers', $account);
+    case 'update':
+      return user_access('edit email lobbyist providers', $account);
+    case 'view':
+      return user_access('view email lobbyist providers', $account);
+    default:
+      return FALSE;
+  }
+}
+
+function elobbyist_mailing_access($op, $entity = NULL, $account = NULL) {
+  $account = isset($account) ? $account : $GLOBALS['user'];
+
+  switch($op) {
+    case 'delete':
+      return user_access('delete email lobbyist mailings', $account);
+    case 'create':
+      return user_access('create email lobbyist mailings', $account);
+    case 'update':
+      return user_access('edit email lobbyist mailings', $account);
+    case 'view':
+      return user_access('view email lobbyist mailings', $account);
+    default:
+      return FALSE;
+  }
+}
+
+function elobbyist_template_access($op, $entity = NULL, $account = NULL) {
+  $account = isset($account) ? $account : $GLOBALS['user'];
+
+  switch($op) {
+    case 'delete':
+      return user_access('delete email lobbyist templates', $account);
+    case 'create':
+      return user_access('create email lobbyist templates', $account);
+    case 'update':
+      return user_access('edit email lobbyist templates', $account);
+    case 'view':
+      return user_access('view email lobbyist templates', $account);
+    default:
+      return FALSE;
+  }
+}
+
+function elobbyist_contact_group_access($op, $entity = NULL, $account = NULL) {
+  $account = isset($account) ? $account : $GLOBALS['user'];
+
+  switch($op) {
+    case 'delete':
+      return user_access('delete email lobbyist contact groups', $account);
+    case 'create':
+      return user_access('create email lobbyist contact groups', $account);
+    case 'update':
+      return user_access('edit email lobbyist contact groups', $account);
+    case 'view':
+      return user_access('view email lobbyist contact groups', $account);
+    default:
+      return FALSE;
+  }
+}
+
+function elobbyist_activity_access($op, $entity = NULL, $account = NULL) {
+  $account = isset($account) ? $account : $GLOBALS['user'];
+
+  switch($op) {
+    case 'delete':
+      return FALSE;
+    case 'create':
+      return FALSE;
+    case 'update':
+      return FALSE;
+    case 'view':
+      return user_access('view email lobbyist activities', $account);
+    default:
+      return FALSE;
+  }
+}
+
+/*
+ * Implements hook_views_bulk_operations_form_alter to hide\disable pre-hand unauthorized operations
+ */
+function elobbyist_views_bulk_operations_form_alter(&$form, &$form_state, &$vbo) {
+  //work only on EMail Lobbyist entities
+  if (FALSE === strpos($vbo->view->base_table, 'elobbyist_')) {
+    return;
+  }
+  
+  switch($form_state['step']) {
+    case 'views_bulk_operations_config_form':
+      //REPLACE text field with select field for Group parameter of elobbyist_add_contacts_to_group action
+      if (isset($form_state['operation']) && isset($form_state['operation']->operationId)
+        && $form_state['operation']->operationId == 'rules_component::elobbyist_add_contacts_to_group') {
+         switch($vbo->view->name) {
+          case 'elobbyist_subscribers':
+            $form['parameter']['grpid']['settings']['grpid'] = array(
+              '#type' => 'select',
+              '#key_type' => 'associative',
+              '#required' => TRUE,
+              '#title' => t('Group'),
+              '#options' => elobbyist_get_groups('subscribers'),
+            );
+            break;       
+          case 'elobbyist_recipients':
+            $form['parameter']['grpid']['settings']['grpid'] = array(
+              '#type' => 'select',
+              '#key_type' => 'associative',
+              '#required' => TRUE,
+              '#title' => t('Group'),
+              '#options' => elobbyist_get_groups('recipients'),
+            );
+            break; 
+         }
+      }
+      break;
+    case 'views_form_views_form':
+      //remove delete action if not permitted - even if VBO->"Execute Delete item" permission exists
+      if (isset($form['select']['operation']['#options']['action::views_bulk_operations_delete_item'])) {
+        if (!entity_access('delete', $vbo->view->base_table)) {
+           unset($form['select']['operation']['#options']['action::views_bulk_operations_delete_item']);    
+        }
+      }
+
+      $form['select']['#title'] = t('Actions');
+
+      //hide VBO controls if there are no actions
+      if (count($form['select']['operation']['#options']) <=  1) {
+        unset($form['select']['operation']);
+        unset($form['select']['submit']);
+      }
+      else {
+        //change VBO labels
+        $form['select']['operation']['#options'][0] = t('- row action -');
+        $form['select']['submit']['#value'] = t('Run');
+      }
+
+      //add other elements to form
+      if (entity_access('create', $vbo->view->base_table)) {
+        switch($vbo->view->name) {
+          case 'elobbyist_subscribers':
+            $form['select']['new_record'] = array(
+              '#markup'  => l(t('Add new subscriber'),'elobbyist/subscribers/add/subscriber') . '&nbsp;&nbsp;',
+              '#weight' => -10,
+            );
+            break;       
+          case 'elobbyist_recipients':
+            $form['select']['new_record'] = array(
+              '#markup'  => l(t('Add new recipient'),'elobbyist/recipients/add/recipient') . '&nbsp;&nbsp;',
+              '#weight' => -10,
+            );
+            break;       
+          case 'elobbyist_subscribers_groups':
+            $form['select']['new_record'] = array(
+              '#markup'  => l(t('Add new group'),'elobbyist/subscribers/groups/add') . '&nbsp;&nbsp;',
+              '#weight' => -10,
+            );
+            break;
+          case 'elobbyist_recipients_groups':
+            $form['select']['new_record'] = array(
+              '#markup'  => l(t('Add new group'),'elobbyist/recipients/groups/add') . '&nbsp;&nbsp;',
+              '#weight' => -10,
+            );
+            break;        
+          case 'elobbyist_providers':
+            $form['select']['new_record'] = array(
+              '#markup'  => l(t('Add new email provider'),'elobbyist/email-providers/add') . '&nbsp;&nbsp;',
+              '#weight' => -10,
+            );
+            break;       
+          case 'elobbyist_mailings':
+            $form['select']['new_record'] = array(
+              '#markup'  => l(t('Add new mailing'),'elobbyist/mailings/add') . '&nbsp;&nbsp;',
+              '#weight' => -10,
+            );
+            break;
+          case 'elobbyist_templates':
+            $form['select']['new_record'] = array(
+              '#markup'  => l(t('Add new template'),'elobbyist/templates/add') . '&nbsp;&nbsp;',
+              '#weight' => -10,
+            );
+            break;
+        }
+      }
+
+      $form['select']['export_as_xls'] = array(
+        '#markup'  => '&nbsp;&nbsp;' . l(t('Export as xls'),$vbo->view->override_url . '/download') . '&nbsp;&nbsp;',
+        '#weight' => 10,
+      );
+     break;
+  }
+}
+
 
 /*
  * Implements hook_cron()
@@ -695,8 +945,6 @@ function elobbyist_cron() {
   $task->Run();
   unset($task);
 }
-
-
 
 /**
  * Gets contact built in types. Used in hook_entity_info()
@@ -832,37 +1080,37 @@ function elobbyist_template_status_list() {
  */
 function elobbyist_email_provider_uri($entity) {
   return array(
-    'path' => 'elobbyist/email-provider/' . $entity->providerid . '/edit',
+    'path' => 'elobbyist/email-provider/' . $entity->providerid . '/view',
   );
 }
 
 function elobbyist_contact_uri($contact) {
   return array(
-    'path' => 'elobbyist/contact/' . $contact->cid . '/edit',
+    'path' => 'elobbyist/contact/' . $contact->cid . '/view',
   );
 }
 
 function elobbyist_activity_uri($activity) {
   return array(
-    'path' => 'elobbyist/activity/' . $activity->aid . '/edit',
+    'path' => 'elobbyist/activity/' . $activity->aid . '/view',
   );
 }
 
 function elobbyist_group_uri($contact_group) {
   return array(
-    'path' => 'elobbyist/contact-group/' . $contact_group->grpid . '/edit',
+    'path' => 'elobbyist/contact-group/' . $contact_group->grpid . '/view',
   );
 }
 
 function elobbyist_mailing_uri($mailing) {
   return array(
-    'path' => 'elobbyist/mailing/' . $mailing->mid . '/edit',
+    'path' => 'elobbyist/mailing/' . $mailing->mid . '/view',
   );
 }
 
 function elobbyist_template_uri($template) {
   return array(
-    'path' => 'elobbyist/template/' . $template->tid . '/edit',
+    'path' => 'elobbyist/template/' . $template->tid . '/view',
   );
 }
 
@@ -870,76 +1118,66 @@ function elobbyist_template_uri($template) {
  * main page callback
  */
 function elobbyist_main_page() {
-  $links = array();
+  return array();
+  /*$links = array();
   
-  $links[] = array(
-    'title' => t('Subscribers'),
-    'href' => 'elobbyist/subscribers',
-    'html' => TRUE,
-  );
+  if (entity_access('view', 'elobbyist_contact')) {
+    $links[] = array(
+      'title' => t('Subscribers'),
+      'href' => 'elobbyist/subscribers',
+      'html' => TRUE,
+    );
+  }
   
-  $links[] = array(
-    'title' => t('Add new subscriber'),
-    'href' => 'elobbyist/subscribers/add/subscriber',
-    'html' => TRUE,
-  );
+  if (entity_access('view', 'elobbyist_contact_group')) {
+    $links[] = array(
+      'title' => t('Subscribers groups'),
+      'href' => 'elobbyist/subscribers/groups',
+      'html' => TRUE,
+    );
+  }
 
+  if (entity_access('view', 'elobbyist_contact')) {
+    $links[] = array(
+      'title' => t('Recipients'),
+      'href' => 'elobbyist/recipients',
+      'html' => TRUE,
+    );
+  }
 
-  $links[] = array(
-    'title' => t('Subscribers groups'),
-    'href' => 'elobbyist/subscribers/groups',
-    'html' => TRUE,
-  );
-
-  $links[] = array(
-    'title' => t('Add new subscribers group'),
-    'href' => 'elobbyist/subscribers/groups/add',
-    'html' => TRUE,
-  );
-
-  $links[] = array(
-    'title' => t('Recipients'),
-    'href' => 'elobbyist/recipients',
-    'html' => TRUE,
-  );
-
-  $links[] = array(
-    'title' => t('Add new recipient'),
-    'href' => 'elobbyist/recipients/add/recipient',
-    'html' => TRUE,
-  );
-
-  $links[] = array(
-    'title' => t('Recipients'),
-    'href' => 'elobbyist/recipients/groups',
-    'html' => TRUE,
-  );
-
-  $links[] = array(
-    'title' => t('Add new recipients group'),
-    'href' => 'elobbyist/recipients/groups/add',
-    'html' => TRUE,
-  );
+  if (entity_access('view', 'elobbyist_contact_group')) {
+    $links[] = array(
+      'title' => t('Recipients groups'),
+      'href' => 'elobbyist/recipients/groups',
+      'html' => TRUE,
+    );
+  }
   
-  $links[] = array(
-    'title' => t('Mailings'),
-    'href' => 'elobbyist/mailings',
-    'html' => TRUE,
-  );
+  if (entity_access('view', 'elobbyist_mailing')) {
+    $links[] = array(
+      'title' => t('Mailings'),
+      'href' => 'elobbyist/mailings',
+      'html' => TRUE,
+    );
+  }
   
-  $links[] = array(
-    'title' => t('Templates'),
-    'href' => 'elobbyist/templates',
-    'html' => TRUE,
-  );
+  if (entity_access('view', 'elobbyist_template')) {
+    $links[] = array(
+      'title' => t('Templates'),
+      'href' => 'elobbyist/templates',
+      'html' => TRUE,
+    );
+  }
   
-  $links[] = array(
-    'title' => t('Email Providers'),
-    'href' => 'elobbyist/email-providers',
-    'html' => TRUE,
-  );
+  if (entity_access('view', 'elobbyist_email_provider')) {
+    $links[] = array(
+      'title' => t('Email Providers'),
+      'href' => 'elobbyist/email-providers',
+      'html' => TRUE,
+    );
+  }
   
-  return theme('links', array('links' => $links));
+  return theme('links', array('links' => $links));*/
 }
 
 /**
@@ -1253,6 +1491,7 @@ function elobbyist_groups_process_element(&$element, $element_type, $entity_type
  * Submits attached fields
  */
 function elobbyist_field_attach_submit($entity_type, $entity, $form, &$form_state) {
+   
   if (!isset($form_state['field']) || !isset($entity)) {
     return;
   }
@@ -1274,7 +1513,7 @@ function elobbyist_field_attach_submit($entity_type, $entity, $form, &$form_stat
     if (isset($entity->cid)) {
       $entity_id = $entity->cid;
     }
-    $fields_filter = array_intersect($fields, array('elobbyist_contact_groups'));
+    $fields_filter = array_intersect($fields, array('elobbyist_subscriber', 'elobbyist_recipient'));
   }
   elseif ($entity_type == 'elobbyist_mailing') {  
     if (isset($entity->mid)) {
@@ -1300,7 +1539,7 @@ function elobbyist_groups_attach_submit($field, $entity_id, $entity_type, &$enti
     return;
   }
 
-  $childelm = $entity_type . '_' . $field . '_select';
+  $childelm = $entity_type . '_' . $form[$field]['#type'] . '_select';
 
   //save relations
   $newvalues = array();
@@ -1422,6 +1661,74 @@ function elobbyist_relations_get_keys($relations, $target_entity, $relation_type
 }
 
 /*
+ * Implements hook_field_formatter_info
+ */
+function elobbyist_field_formatter_info() {
+  return array(
+    'elobbyist_relation_formatter' => array(
+      'label' => t('Elobbyist Relation Formatter'),
+      'description' => t('Displays the same result as relation_otherendpoint with a preceding label'),
+      'field types' => array('relation'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_field_formatter_view() for relation_dummy_field
+ * 
+ * This formatter adds label and also fixes multiple-relation-types-per-entity duplicating bug
+ * 
+ */
+function elobbyist_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, $items, $display) {
+  $element = array();
+  list($entity_id) = entity_extract_ids($entity_type, $entity);
+  switch ($display['type']) {
+    case 'elobbyist_relation_formatter':
+      $count_item = 0; //counts items of the required relation type only
+      foreach ($items as $delta => $item) {
+        //prevent duplicates
+        if ($field['field_name'] != $item['relation_type']) {
+          continue;
+        }
+        $count_item++;
+
+        $links = array();
+        $relation = (object) $item;
+        foreach (array_filter($relation->endpoints[LANGUAGE_NONE]) as $endpoint) {
+          $related_entities = entity_load($endpoint['entity_type'], array($endpoint['entity_id']));
+          $related_entity = reset($related_entities);
+          if ($endpoint['entity_type'] == $entity_type && $endpoint['entity_id'] == $entity_id) {
+            continue;
+          }
+          else {
+            $link = entity_uri($endpoint['entity_type'], $related_entity);
+            $link['href'] = $link['path'];
+          }
+          $link['title'] = entity_label($endpoint['entity_type'], $related_entity);
+          $links[] = $link;
+        }
+        $uri = entity_uri('relation', $relation);
+        
+        if ($count_item == 1) {
+          $element[$delta]['relation']['label'] = array(
+            '#markup' => '<b>' . $instance['label'] . '</b>',
+            '#weight' => -1,
+            );
+        }
+
+        $element[$delta]['relation']['links'] = array(
+          '#theme' => 'links',
+          '#links' => $links,
+          '#weight' => 0,
+        );
+      }
+      break;
+  }
+
+  return $element;
+}
+
+/*
  * manual "foreign keys" cascade unset - should be called inside the controller's transaction
  * 
  * @param $foreign_table
@@ -1490,6 +1797,33 @@ function elobbyist_foreign_key_count($foreign_table, $foreign_key, $ids) {
     ->execute();
   
   return $query->fetchColumn();
+}
+
+/*
+ * Validate that email is unique
+ */
+function elobbyist_unique_field($entname, $idval, $idname, $fieldname, $fieldval, $label) {
+  //Execute a count query to see if there's other similar values.
+  
+  $query = db_select($entname, 'e');
+  
+  $query->addExpression("COUNT($idname)", 'id_count');
+  
+  $query->condition($fieldname, $fieldval);
+    
+  if (!empty($idval))
+        $query = $query->condition($idname, $idval, '<>');
+
+  $query = $query->execute();
+  
+  $col =  $query->fetchColumn();
+
+  if ($col > 0) {
+    form_set_error('email', t('@label must be unique. "@val" is already in use.',
+      array('@label' => $label, '@val' => $fieldval)));
+    return FALSE;
+  }
+  return TRUE;
 }
 
 /*
@@ -1635,12 +1969,13 @@ function elobbyist_block_info() {
 function elobbyist_block_view($block_name = '') {
   if ($block_name == 'elobbyist_registration') {
     
-    $contact = entity_get_controller('elobbyist_contact')->create('subscriber');
-    $contact->stype = ELOBBYIST_SUBSCRIBER_TYPE_PERSISTENT;
-    $contact->form = ELOBBYIST_FORM_BLOCK;
-    $contact->bounce = ELOBBYIST_CONTACT_EMAIL_UNVERIFIED;
-    $contact->notify = variable_get('elobbyist_notify_default_block', ELOBBYIST_DEFAULT_NOTIFY_ON_EMAILS_SENT_FOR_BLOCK); 
-    
+    $contact = entity_get_controller('elobbyist_contact')->create(array(
+      'type' => 'subscriber',
+      'stype' => ELOBBYIST_SUBSCRIBER_TYPE_PERSISTENT,
+      'form' => ELOBBYIST_FORM_BLOCK,
+      'bounce' => ELOBBYIST_CONTACT_EMAIL_UNVERIFIED,
+      'notify' => variable_get('elobbyist_notify_default_block', ELOBBYIST_DEFAULT_NOTIFY_ON_EMAILS_SENT_FOR_BLOCK)));
+       
     require_once(DRUPAL_ROOT . '/' . drupal_get_path('module', 'elobbyist') . '/includes/contact.pages.inc');
     
     $block = array(

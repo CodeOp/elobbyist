@@ -9,15 +9,19 @@ configure = elobbyist/settings
 dependencies[] = elobbyist_domainname
 
 ; Contrib dependencies
+dependencies[] = entity
 dependencies[] = relation
 dependencies[] = relation_dummy_field
-dependencies[] = admin_menu_toolbar
-dependencies[] = encrypt
-dependencies[] = ckeditor
-dependencies[] = clientside_validation_fapi
 dependencies[] = date_popup
 dependencies[] = timeperiod
 dependencies[] = views
+dependencies[] = views_bulk_operations
+dependencies[] = views_data_export
+dependencies[] = rules
+dependencies[] = encrypt
+dependencies[] = ckeditor
+dependencies[] = clientside_validation_fapi
+
 
 ; Controller Classes
 files[] = includes/contact.controller.inc

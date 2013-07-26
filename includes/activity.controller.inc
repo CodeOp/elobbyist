@@ -1,15 +1,15 @@
 <?php
 
-class ELobbyistActivityController extends DrupalDefaultEntityController {
+class ELobbyistActivityController extends EntityAPIControllerExportable {
   
-  public function create() {
-    return (object)array(
+  public function create(array $values = array()) {
+    return (object)array_merge(array(
       'aid' => NULL,
       'mid' => NULL,
       'tid' => NULL,
       'fromcid' => NULL,
       'tocid' => NULL,
-    );
+    ), $values);
   }
   
   public function save($entity) {

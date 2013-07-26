@@ -331,12 +331,12 @@ class ElobbyistCronTaskMailing {
   protected function CreateActivity($Sender, $Recipient) {
     //create the activity
     $ctl = entity_get_controller('elobbyist_activity');
-    $activity = $ctl->create();
-
-    $activity->mid = $this->Mailing->mid;
-    $activity->tid = $this->Mailing->tid;
-    $activity->fromcid = $Sender->cid;
-    $activity->tocid = $Recipient->cid;
+    $activity = $ctl->create(array(
+      'mid' => $this->Mailing->mid,
+      'tid' => $this->Mailing->tid,
+      'fromcid' => $Sender->cid,
+      'tocid' => $Recipient->cid,
+      ));
 
     $activity = $ctl->save($activity);
 

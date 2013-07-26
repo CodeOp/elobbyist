@@ -15,6 +15,16 @@
  */
 class elobbyist_views_handler_linked_name extends views_handler_field {
 
+  function init(&$view, &$options) {
+    parent::init($view, $options);
+    
+    if (isset($this->definition['readonly url'])) {
+      if (!entity_access('update', $view->base_table)) {
+        $this->definition['url'] = $this->definition['readonly url'];
+      }
+    }
+  }
+  
   function option_definition() {
     $options = parent::option_definition();
     $options['link_to_record'] = array('default' => isset($this->definition['link_to_record default']) ? $this->definition['link_to_record default'] : FALSE, 'bool' => TRUE);
@@ -33,6 +43,8 @@ class elobbyist_views_handler_linked_name extends views_handler_field {
     );
 
     parent::options_form($form, $form_state);
+    
+    
   }
 
   /**
