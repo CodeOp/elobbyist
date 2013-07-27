@@ -292,11 +292,6 @@ function elobbyist_group_contacts_grid($entity) {
   else {
     $view = views_get_view('elobbyist_recipients_by_group');
   }
-
-  $filter_by_group = $view->get_item('default', 'filter', 'grpid');
-  $filter_by_group['value'] = $entity->grpid;
-
-  $view->set_item('default', 'filter', 'grpid', $filter_by_group);
   
-  return $view->preview('default', array());
+  return $view->preview('default', array($entity->grpid));
 }

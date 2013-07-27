@@ -568,20 +568,7 @@ function elobbyist_mailing_sent_emails_page($entity, $view_mode = 'full') {
  
   $view = views_get_view('elobbyist_activities_by_mailing');
 
-  $filter_by_mailing = $view->get_item('default', 'filter', 'mid');
-  $filter_by_mailing['value'] = $entity->mid;
-
-  $view->set_item('default', 'filter', 'mid', $filter_by_mailing);
-
-  return $view->preview('default', array());
-}
-
-function elobbyist_mailing_action_page_access_callback($entity, $perm) {
-  if ($entity->schedule != ELOBBYIST_MAILING_SCHEDULE_ON_GOING) {
-    return FALSE;
-  }
-  
-  return user_access($perm);
+  return $view->preview('default', array($entity->mid));
 }
 
 /*

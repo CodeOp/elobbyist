@@ -688,6 +688,18 @@ function elobbyist_views_data() {
         'entity access' => 'delete',
       ),
     ),
+    'members_link' => array(
+      'real field' => 'grpid',
+      'title' => t('Members'),
+      'help' => t('Group member contacts'),
+      'field' => array(
+        'handler' => 'elobbyist_views_handler_link',
+        'click sortable' => FALSE,
+        'url' => 'elobbyist/contact-group/%/members',
+        'link_text' => t('Members'),
+        'entity access' => 'update',
+      ),
+    ),
   );
   
   //get array once for both field and filter handlers
@@ -1114,7 +1126,7 @@ function elobbyist_views_default_views() {
   $view->core = 7;
   $view->api_version = '3.0';
   $view->disabled = FALSE; /* Edit this to true to make a default view disabled initially */
-
+  
   /* Display: Master */
   $handler = $view->new_display('default', 'Master', 'default');
   $handler->display->display_options['use_more_always'] = FALSE;
@@ -1123,6 +1135,7 @@ function elobbyist_views_default_views() {
   $handler->display->display_options['cache']['type'] = 'none';
   $handler->display->display_options['query']['type'] = 'views_query';
   $handler->display->display_options['exposed_form']['type'] = 'basic';
+  $handler->display->display_options['exposed_form']['options']['submit_button'] = t('Go');
   $handler->display->display_options['pager']['type'] = 'full';
   $handler->display->display_options['pager']['options']['items_per_page'] = $items_per_page;
   
@@ -1133,7 +1146,6 @@ function elobbyist_views_default_views() {
     'bounce' => 'bounce',
     'stype' => 'stype',
     'edit_link' => 'edit_link',
-//    'delete_link' => 'delete_link',
     'provider_name' => 'provider_name',
   );
   $handler->display->display_options['style_options']['default'] = 'name';
@@ -1171,11 +1183,6 @@ function elobbyist_views_default_views() {
       'separator' => '',
       'empty_column' => 0,
     ),
-   /* 'delete_link' => array(
-      'align' => '',
-      'separator' => '',
-      'empty_column' => 0,
-    ),*/
     'provider_name' => array(
       'sortable' => 0,
       'default_sort_order' => 'asc',
@@ -1258,19 +1265,33 @@ function elobbyist_views_default_views() {
   $handler->display->display_options['fields']['edit_link']['id'] = 'edit_link';
   $handler->display->display_options['fields']['edit_link']['table'] = 'elobbyist_contact';
   $handler->display->display_options['fields']['edit_link']['field'] = 'edit_link';
-  /* Field: Elobbyist Contact: Delete */
- /* $handler->display->display_options['fields']['delete_link']['id'] = 'delete_link';
-  $handler->display->display_options['fields']['delete_link']['table'] = 'elobbyist_contact';
-  $handler->display->display_options['fields']['delete_link']['field'] = 'delete_link';*/
   /* Filter criterion: Elobbyist Contact: Type */
   $handler->display->display_options['filters']['type']['id'] = 'type';
   $handler->display->display_options['filters']['type']['table'] = 'elobbyist_contact';
   $handler->display->display_options['filters']['type']['field'] = 'type';
   $handler->display->display_options['filters']['type']['value'] = 'subscriber';
   
+  /* Filter criterion: Global: Combine fields filter */
+  $handler->display->display_options['filters']['combine']['id'] = 'combine';
+  $handler->display->display_options['filters']['combine']['table'] = 'views';
+  $handler->display->display_options['filters']['combine']['field'] = 'combine';
+  $handler->display->display_options['filters']['combine']['operator'] = 'contains';
+  $handler->display->display_options['filters']['combine']['exposed'] = TRUE;
+  $handler->display->display_options['filters']['combine']['expose']['operator_id'] = 'combine_op';
+  $handler->display->display_options['filters']['combine']['expose']['label'] = t('Search');
+  $handler->display->display_options['filters']['combine']['expose']['operator'] = 'combine_op';
+  $handler->display->display_options['filters']['combine']['expose']['identifier'] = 'name_email';
+  $handler->display->display_options['filters']['combine']['fields'] = array(
+    'name' => 'name',
+    'email' => 'email',
+  );
+  $handler->display->display_options['path'] =  'elobbyist/subscribers';
+  
   /* Display: Data export */
   $handler = $view->new_display('views_data_export', 'Data export', 'views_data_export_1');
-  $handler->display->display_options['pager']['type'] = 'some';
+  $handler->display->display_options['options'] = array();
+  $handler->display->display_options['pager']['type'] = 'full';
+  $handler->display->display_options['pager']['options']['items_per_page'] = 0;
   $handler->display->display_options['access']['type'] = 'perm';
   $handler->display->display_options['access']['perm'] = 'view email lobbyist contacts';
   $handler->display->display_options['style_plugin'] = 'views_data_export_xls';
@@ -1303,6 +1324,7 @@ function elobbyist_views_default_views() {
   $handler->display->display_options['cache']['type'] = 'none';
   $handler->display->display_options['query']['type'] = 'views_query';
   $handler->display->display_options['exposed_form']['type'] = 'basic';
+  $handler->display->display_options['exposed_form']['options']['submit_button'] = t('Go');
   $handler->display->display_options['pager']['type'] = 'full';
   $handler->display->display_options['pager']['options']['items_per_page'] = $items_per_page;
   $handler->display->display_options['style_plugin'] = 'table';
@@ -1310,7 +1332,6 @@ function elobbyist_views_default_views() {
     'name' => 'name',
     'email' => 'email',
     'edit_link' => 'edit_link',
- //   'delete_link' => 'delete_link',
   );
   $handler->display->display_options['style_options']['default'] = 'name';
   $handler->display->display_options['style_options']['info'] = array(
@@ -1333,11 +1354,6 @@ function elobbyist_views_default_views() {
       'separator' => '',
       'empty_column' => 0,
     ),
-   /* 'delete_link' => array(
-      'align' => '',
-      'separator' => '',
-      'empty_column' => 0,
-    ),*/
   );
   
   /* Field: Bulk operations: Elobbyist Contact */
@@ -1384,21 +1400,35 @@ function elobbyist_views_default_views() {
   $handler->display->display_options['fields']['edit_link']['id'] = 'edit_link';
   $handler->display->display_options['fields']['edit_link']['table'] = 'elobbyist_contact';
   $handler->display->display_options['fields']['edit_link']['field'] = 'edit_link';
-  /* Field: Elobbyist Contact: Delete */
- /* $handler->display->display_options['fields']['delete_link']['id'] = 'delete_link';
-  $handler->display->display_options['fields']['delete_link']['table'] = 'elobbyist_contact';
-  $handler->display->display_options['fields']['delete_link']['field'] = 'delete_link';*/
   /* Filter criterion: Elobbyist Contact: Type */
   $handler->display->display_options['filters']['type']['id'] = 'type';
   $handler->display->display_options['filters']['type']['table'] = 'elobbyist_contact';
   $handler->display->display_options['filters']['type']['field'] = 'type';
   $handler->display->display_options['filters']['type']['value'] = 'recipient';
   
+  /* Filter criterion: Global: Combine fields filter */
+  $handler->display->display_options['filters']['combine']['id'] = 'combine';
+  $handler->display->display_options['filters']['combine']['table'] = 'views';
+  $handler->display->display_options['filters']['combine']['field'] = 'combine';
+  $handler->display->display_options['filters']['combine']['operator'] = 'contains';
+  $handler->display->display_options['filters']['combine']['exposed'] = TRUE;
+  $handler->display->display_options['filters']['combine']['expose']['operator_id'] = 'combine_op';
+  $handler->display->display_options['filters']['combine']['expose']['label'] = t('Search');
+  $handler->display->display_options['filters']['combine']['expose']['operator'] = 'combine_op';
+  $handler->display->display_options['filters']['combine']['expose']['identifier'] = 'name_email';
+  $handler->display->display_options['filters']['combine']['fields'] = array(
+    'name' => 'name',
+    'email' => 'email',
+  );
+  $handler->display->display_options['path'] =  'elobbyist/recipients';
+  
   /* Display: Data export */
   $handler = $view->new_display('views_data_export', 'Data export', 'views_data_export_1');
+  $handler->display->display_options['options'] = array();
   $handler->display->display_options['access']['type'] = 'perm';
   $handler->display->display_options['access']['perm'] = 'view email lobbyist contacts';
-  $handler->display->display_options['pager']['type'] = 'some';
+  $handler->display->display_options['pager']['type'] = 'full';
+  $handler->display->display_options['pager']['options']['items_per_page'] = 0;
   $handler->display->display_options['style_plugin'] = 'views_data_export_xls';
   $handler->display->display_options['style_options']['provide_file'] = 1;
   $handler->display->display_options['style_options']['filename'] = '%view_%timestamp-yyyy_%timestamp-mm_%timestamp-dd.xls';
@@ -1429,31 +1459,22 @@ function elobbyist_views_default_views() {
   $handler->display->display_options['cache']['type'] = 'none';
   $handler->display->display_options['query']['type'] = 'views_query';
   $handler->display->display_options['exposed_form']['type'] = 'basic';
+  $handler->display->display_options['exposed_form']['options']['submit_button'] = t('Go');
   $handler->display->display_options['pager']['type'] = 'full';
   $handler->display->display_options['pager']['options']['items_per_page'] = $items_per_page;
   $handler->display->display_options['style_plugin'] = 'table';
   $handler->display->display_options['style_options']['columns'] = array(
     'grpid' => 'grpid',
- //   'delete_link' => 'delete_link',
-    'edit_link' => 'edit_link',
     'name' => 'name',
     'status' => 'status',
+    'edit_link' => 'edit_link',
+    'members_link' => 'members_link',
   );
   $handler->display->display_options['style_options']['default'] = 'name';
   $handler->display->display_options['style_options']['info'] = array(
     'grpid' => array(
       'sortable' => 1,
       'default_sort_order' => 'asc',
-      'align' => '',
-      'separator' => '',
-      'empty_column' => 0,
-    ),
- /*   'delete_link' => array(
-      'align' => '',
-      'separator' => '',
-      'empty_column' => 0,
-    ),*/
-    'edit_link' => array(
       'align' => '',
       'separator' => '',
       'empty_column' => 0,
@@ -1468,6 +1489,16 @@ function elobbyist_views_default_views() {
     'status' => array(
       'sortable' => 1,
       'default_sort_order' => 'asc',
+      'align' => '',
+      'separator' => '',
+      'empty_column' => 0,
+    ),
+    'edit_link' => array(
+      'align' => '',
+      'separator' => '',
+      'empty_column' => 0,
+    ),
+    'members_link' => array(
       'align' => '',
       'separator' => '',
       'empty_column' => 0,
@@ -1510,20 +1541,35 @@ function elobbyist_views_default_views() {
   /* Field: Elobbyist Group: Edit */
   $handler->display->display_options['fields']['edit_link']['id'] = 'edit_link';
   $handler->display->display_options['fields']['edit_link']['table'] = 'elobbyist_group';
-  $handler->display->display_options['fields']['edit_link']['field'] = 'edit_link';
-  /* Field: Elobbyist Group: Delete */
- /* $handler->display->display_options['fields']['delete_link']['id'] = 'delete_link';
-  $handler->display->display_options['fields']['delete_link']['table'] = 'elobbyist_group';
-  $handler->display->display_options['fields']['delete_link']['field'] = 'delete_link';*/
+  $handler->display->display_options['fields']['edit_link']['field'] = 'edit_link';  
+  /* Field: Elobbyist Group: Members */
+  $handler->display->display_options['fields']['members_link']['id'] = 'members_link';
+  $handler->display->display_options['fields']['members_link']['table'] = 'elobbyist_group';
+  $handler->display->display_options['fields']['members_link']['field'] = 'members_link';
+
   /* Filter criterion: Elobbyist Group: Type */
   $handler->display->display_options['filters']['type']['id'] = 'type';
   $handler->display->display_options['filters']['type']['table'] = 'elobbyist_group';
   $handler->display->display_options['filters']['type']['field'] = 'type';
   $handler->display->display_options['filters']['type']['value'] = 'subscribers';
   
+  /* Filter criterion: Elobbyist Group: Name */
+  $handler->display->display_options['filters']['name']['id'] = 'name';
+  $handler->display->display_options['filters']['name']['table'] = 'elobbyist_group';
+  $handler->display->display_options['filters']['name']['field'] = 'name';
+  $handler->display->display_options['filters']['name']['operator'] = 'contains';
+  $handler->display->display_options['filters']['name']['exposed'] = TRUE;
+  $handler->display->display_options['filters']['name']['expose']['operator_id'] = 'name_op';
+  $handler->display->display_options['filters']['name']['expose']['label'] = 'Search';
+  $handler->display->display_options['filters']['name']['expose']['operator'] = 'name_op';
+  $handler->display->display_options['filters']['name']['expose']['identifier'] = 'name';
+  
+  $handler->display->display_options['path'] = 'elobbyist/subscribers/groups';
+  
   /* Display: Data export */
   $handler = $view->new_display('views_data_export', 'Data export', 'views_data_export_1');
-  $handler->display->display_options['pager']['type'] = 'some';
+  $handler->display->display_options['pager']['type'] = 'full';
+  $handler->display->display_options['pager']['options']['items_per_page'] = 0;
   $handler->display->display_options['access']['type'] = 'perm';
   $handler->display->display_options['access']['perm'] = 'view email lobbyist contact groups';
   $handler->display->display_options['style_plugin'] = 'views_data_export_xls';
@@ -1556,31 +1602,22 @@ function elobbyist_views_default_views() {
   $handler->display->display_options['cache']['type'] = 'none';
   $handler->display->display_options['query']['type'] = 'views_query';
   $handler->display->display_options['exposed_form']['type'] = 'basic';
+  $handler->display->display_options['exposed_form']['options']['submit_button'] = t('Go');
   $handler->display->display_options['pager']['type'] = 'full';
   $handler->display->display_options['pager']['options']['items_per_page'] = $items_per_page;
   $handler->display->display_options['style_plugin'] = 'table';
   $handler->display->display_options['style_options']['columns'] = array(
     'grpid' => 'grpid',
- //   'delete_link' => 'delete_link',
-    'edit_link' => 'edit_link',
     'name' => 'name',
     'status' => 'status',
+    'edit_link' => 'edit_link',
+    'members_link' => 'members_link',
   );
   $handler->display->display_options['style_options']['default'] = 'name';
   $handler->display->display_options['style_options']['info'] = array(
     'grpid' => array(
       'sortable' => 1,
       'default_sort_order' => 'asc',
-      'align' => '',
-      'separator' => '',
-      'empty_column' => 0,
-    ),
-  /*  'delete_link' => array(
-      'align' => '',
-      'separator' => '',
-      'empty_column' => 0,
-    ),*/
-    'edit_link' => array(
       'align' => '',
       'separator' => '',
       'empty_column' => 0,
@@ -1595,6 +1632,11 @@ function elobbyist_views_default_views() {
     'status' => array(
       'sortable' => 1,
       'default_sort_order' => 'asc',
+      'align' => '',
+      'separator' => '',
+      'empty_column' => 0,
+    ),
+    'edit_link' => array(
       'align' => '',
       'separator' => '',
       'empty_column' => 0,
@@ -1637,21 +1679,36 @@ function elobbyist_views_default_views() {
   $handler->display->display_options['fields']['edit_link']['id'] = 'edit_link';
   $handler->display->display_options['fields']['edit_link']['table'] = 'elobbyist_group';
   $handler->display->display_options['fields']['edit_link']['field'] = 'edit_link';
-  /* Field: Elobbyist Group: Delete */
- /* $handler->display->display_options['fields']['delete_link']['id'] = 'delete_link';
-  $handler->display->display_options['fields']['delete_link']['table'] = 'elobbyist_group';
-  $handler->display->display_options['fields']['delete_link']['field'] = 'delete_link';*/
+  /* Field: Elobbyist Group: Members */
+  $handler->display->display_options['fields']['members_link']['id'] = 'members_link';
+  $handler->display->display_options['fields']['members_link']['table'] = 'elobbyist_group';
+  $handler->display->display_options['fields']['members_link']['field'] = 'members_link';
+
   /* Filter criterion: Elobbyist Group: Type */
   $handler->display->display_options['filters']['type']['id'] = 'type';
   $handler->display->display_options['filters']['type']['table'] = 'elobbyist_group';
   $handler->display->display_options['filters']['type']['field'] = 'type';
   $handler->display->display_options['filters']['type']['value'] = 'recipients';
   
+  /* Filter criterion: Elobbyist Group: Name */
+  $handler->display->display_options['filters']['name']['id'] = 'name';
+  $handler->display->display_options['filters']['name']['table'] = 'elobbyist_group';
+  $handler->display->display_options['filters']['name']['field'] = 'name';
+  $handler->display->display_options['filters']['name']['operator'] = 'contains';
+  $handler->display->display_options['filters']['name']['exposed'] = TRUE;
+  $handler->display->display_options['filters']['name']['expose']['operator_id'] = 'name_op';
+  $handler->display->display_options['filters']['name']['expose']['label'] = 'Search';
+  $handler->display->display_options['filters']['name']['expose']['operator'] = 'name_op';
+  $handler->display->display_options['filters']['name']['expose']['identifier'] = 'name';
+  
+  $handler->display->display_options['path'] = 'elobbyist/recipients/groups';
+  
   /* Display: Data export */
   $handler = $view->new_display('views_data_export', 'Data export', 'views_data_export_1');
   $handler->display->display_options['access']['type'] = 'perm';
   $handler->display->display_options['access']['perm'] = 'view email lobbyist contact groups';
-  $handler->display->display_options['pager']['type'] = 'some';
+  $handler->display->display_options['pager']['type'] = 'full';
+  $handler->display->display_options['pager']['options']['items_per_page'] = 0;
   $handler->display->display_options['style_plugin'] = 'views_data_export_xls';
   $handler->display->display_options['style_options']['provide_file'] = 1;
   $handler->display->display_options['style_options']['filename'] = '%view_%timestamp-yyyy_%timestamp-mm_%timestamp-dd.xls';
@@ -1682,6 +1739,7 @@ function elobbyist_views_default_views() {
   $handler->display->display_options['cache']['type'] = 'none';
   $handler->display->display_options['query']['type'] = 'views_query';
   $handler->display->display_options['exposed_form']['type'] = 'basic';
+  $handler->display->display_options['exposed_form']['options']['submit_button'] = t('Go');
   $handler->display->display_options['pager']['type'] = 'full';
   $handler->display->display_options['pager']['options']['items_per_page'] = $items_per_page;
   $handler->display->display_options['style_plugin'] = 'table';
@@ -1691,7 +1749,6 @@ function elobbyist_views_default_views() {
     'subject' => 'subject',
     'status' => 'status',
     'edit_link' => 'edit_link',
-   // 'delete_link' => 'delete_link',
   );
   $handler->display->display_options['style_options']['default'] = 'name';
   $handler->display->display_options['style_options']['info'] = array(
@@ -1728,11 +1785,6 @@ function elobbyist_views_default_views() {
       'separator' => '',
       'empty_column' => 0,
     ),
-  /*  'delete_link' => array(
-      'align' => '',
-      'separator' => '',
-      'empty_column' => 0,
-    ),*/
   );
   
   /* Field: Bulk operations */
@@ -1775,14 +1827,27 @@ function elobbyist_views_default_views() {
   $handler->display->display_options['fields']['edit_link']['id'] = 'edit_link';
   $handler->display->display_options['fields']['edit_link']['table'] = 'elobbyist_template';
   $handler->display->display_options['fields']['edit_link']['field'] = 'edit_link';
-  /* Field: Elobbyist Template: Delete */
- /* $handler->display->display_options['fields']['delete_link']['id'] = 'delete_link';
-  $handler->display->display_options['fields']['delete_link']['table'] = 'elobbyist_template';
-  $handler->display->display_options['fields']['delete_link']['field'] = 'delete_link';*/
+  
+  /* Filter criterion: Global: Combine fields filter */
+  $handler->display->display_options['filters']['combine']['id'] = 'combine';
+  $handler->display->display_options['filters']['combine']['table'] = 'views';
+  $handler->display->display_options['filters']['combine']['field'] = 'combine';
+  $handler->display->display_options['filters']['combine']['operator'] = 'contains';
+  $handler->display->display_options['filters']['combine']['exposed'] = TRUE;
+  $handler->display->display_options['filters']['combine']['expose']['operator_id'] = 'combine_op';
+  $handler->display->display_options['filters']['combine']['expose']['label'] = t('Search');
+  $handler->display->display_options['filters']['combine']['expose']['operator'] = 'combine_op';
+  $handler->display->display_options['filters']['combine']['expose']['identifier'] = 'name_subject';
+  $handler->display->display_options['filters']['combine']['fields'] = array(
+    'name' => 'name',
+    'subject' => 'subject',
+  );
+  $handler->display->display_options['path'] =  'elobbyist/templates';
   
   /* Display: Data export */
   $handler = $view->new_display('views_data_export', 'Data export', 'views_data_export_1');
-  $handler->display->display_options['pager']['type'] = 'some';
+  $handler->display->display_options['pager']['type'] = 'full';
+  $handler->display->display_options['pager']['options']['items_per_page'] = 0;
   $handler->display->display_options['access']['type'] = 'perm';
   $handler->display->display_options['access']['perm'] = 'view email lobbyist templates';
   $handler->display->display_options['style_plugin'] = 'views_data_export_xls';
@@ -1815,6 +1880,7 @@ function elobbyist_views_default_views() {
   $handler->display->display_options['cache']['type'] = 'none';
   $handler->display->display_options['query']['type'] = 'views_query';
   $handler->display->display_options['exposed_form']['type'] = 'basic';
+  $handler->display->display_options['exposed_form']['options']['submit_button'] = t('Go');
   $handler->display->display_options['pager']['type'] = 'full';
   $handler->display->display_options['pager']['options']['items_per_page'] = $items_per_page;
   $handler->display->display_options['style_plugin'] = 'table';
@@ -1827,7 +1893,6 @@ function elobbyist_views_default_views() {
     'start' => 'start',
     'end' => 'end',
     'edit_link' => 'edit_link',
- //   'delete_link' => 'delete_link',
     'tid' => 'tid',
   );
   $handler->display->display_options['style_options']['default'] = '-1';
@@ -1886,11 +1951,6 @@ function elobbyist_views_default_views() {
       'separator' => '',
       'empty_column' => 0,
     ),
- /*   'delete_link' => array(
-      'align' => '',
-      'separator' => '',
-      'empty_column' => 0,
-    ),*/
     'tid' => array(
       'sortable' => 1,
       'default_sort_order' => 'asc',
@@ -1962,10 +2022,6 @@ function elobbyist_views_default_views() {
   $handler->display->display_options['fields']['edit_link']['id'] = 'edit_link';
   $handler->display->display_options['fields']['edit_link']['table'] = 'elobbyist_mailing';
   $handler->display->display_options['fields']['edit_link']['field'] = 'edit_link';
-  /* Field: Elobbyist Mailing: Delete */
- /* $handler->display->display_options['fields']['delete_link']['id'] = 'delete_link';
-  $handler->display->display_options['fields']['delete_link']['table'] = 'elobbyist_mailing';
-  $handler->display->display_options['fields']['delete_link']['field'] = 'delete_link';*/
   /* Field: Elobbyist Template: Template id */
   $handler->display->display_options['fields']['tid']['id'] = 'tid';
   $handler->display->display_options['fields']['tid']['table'] = 'elobbyist_template';
@@ -1978,9 +2034,26 @@ function elobbyist_views_default_views() {
   $handler->display->display_options['sorts']['created']['field'] = 'created';
   $handler->display->display_options['sorts']['created']['order'] = 'DESC';
   
+  /* Filter criterion: Global: Combine fields filter */
+  $handler->display->display_options['filters']['combine']['id'] = 'combine';
+  $handler->display->display_options['filters']['combine']['table'] = 'views';
+  $handler->display->display_options['filters']['combine']['field'] = 'combine';
+  $handler->display->display_options['filters']['combine']['operator'] = 'contains';
+  $handler->display->display_options['filters']['combine']['exposed'] = TRUE;
+  $handler->display->display_options['filters']['combine']['expose']['operator_id'] = 'combine_op';
+  $handler->display->display_options['filters']['combine']['expose']['label'] = t('Search');
+  $handler->display->display_options['filters']['combine']['expose']['operator'] = 'combine_op';
+  $handler->display->display_options['filters']['combine']['expose']['identifier'] = 'name_template';
+  $handler->display->display_options['filters']['combine']['fields'] = array(
+    'name' => 'name',
+    'template_name' => 'template_name',
+  );
+  $handler->display->display_options['path'] =  'elobbyist/mailings';
+  
   /* Display: Data export */
   $handler = $view->new_display('views_data_export', 'Data export', 'views_data_export_1');
-  $handler->display->display_options['pager']['type'] = 'some';
+  $handler->display->display_options['pager']['type'] = 'full';
+  $handler->display->display_options['pager']['options']['items_per_page'] = 0;
   $handler->display->display_options['access']['type'] = 'perm';
   $handler->display->display_options['access']['perm'] = 'view email lobbyist mailings';
   $handler->display->display_options['style_plugin'] = 'views_data_export_xls';
@@ -2014,12 +2087,12 @@ function elobbyist_views_default_views() {
   $handler->display->display_options['cache']['type'] = 'none';
   $handler->display->display_options['query']['type'] = 'views_query';
   $handler->display->display_options['exposed_form']['type'] = 'basic';
+  $handler->display->display_options['exposed_form']['options']['submit_button'] = t('Go');
   $handler->display->display_options['pager']['type'] = 'full';
   $handler->display->display_options['pager']['options']['items_per_page'] = $items_per_page;
   $handler->display->display_options['style_plugin'] = 'table';
   $handler->display->display_options['style_options']['columns'] = array(
     'providerid' => 'providerid',
-   // 'delete_link' => 'delete_link',
     'edit_link' => 'edit_link',
     'name' => 'name',
     'smtphost' => 'smtphost',
@@ -2034,11 +2107,6 @@ function elobbyist_views_default_views() {
       'separator' => '',
       'empty_column' => 0,
     ),
-  /*  'delete_link' => array(
-      'align' => '',
-      'separator' => '',
-      'empty_column' => 0,
-    ),*/
     'edit_link' => array(
       'align' => '',
       'separator' => '',
@@ -2115,15 +2183,29 @@ function elobbyist_views_default_views() {
   $handler->display->display_options['fields']['edit_link']['id'] = 'edit_link';
   $handler->display->display_options['fields']['edit_link']['table'] = 'elobbyist_email_provider';
   $handler->display->display_options['fields']['edit_link']['field'] = 'edit_link';
-  /* Field: Elobbyist Email Provider: Delete */
- /* $handler->display->display_options['fields']['delete_link']['id'] = 'delete_link';
-  $handler->display->display_options['fields']['delete_link']['table'] = 'elobbyist_email_provider';
-  $handler->display->display_options['fields']['delete_link']['field'] = 'delete_link';*/
+  
+  /* Filter criterion: Global: Combine fields filter */
+  $handler->display->display_options['filters']['combine']['id'] = 'combine';
+  $handler->display->display_options['filters']['combine']['table'] = 'views';
+  $handler->display->display_options['filters']['combine']['field'] = 'combine';
+  $handler->display->display_options['filters']['combine']['operator'] = 'contains';
+  $handler->display->display_options['filters']['combine']['exposed'] = TRUE;
+  $handler->display->display_options['filters']['combine']['expose']['operator_id'] = 'combine_op';
+  $handler->display->display_options['filters']['combine']['expose']['label'] = t('Search');
+  $handler->display->display_options['filters']['combine']['expose']['operator'] = 'combine_op';
+  $handler->display->display_options['filters']['combine']['expose']['identifier'] = 'name_host_domain';
+  $handler->display->display_options['filters']['combine']['fields'] = array(
+    'name' => 'name',
+    'smtphost' => 'smtphost',
+    'elobbyist_domain' => 'elobbyist_domain',
+  );
+  $handler->display->display_options['path'] =  'elobbyist/email-providers';
 
   
   /* Display: Data export */
   $handler = $view->new_display('views_data_export', 'Data export', 'views_data_export_1');
-  $handler->display->display_options['pager']['type'] = 'some';
+  $handler->display->display_options['pager']['type'] = 'full';
+  $handler->display->display_options['pager']['options']['items_per_page'] = 0;
   $handler->display->display_options['access']['type'] = 'perm';
   $handler->display->display_options['access']['perm'] = 'view email lobbyist email providers';
   $handler->display->display_options['style_plugin'] = 'views_data_export_xls';
@@ -2156,6 +2238,7 @@ function elobbyist_views_default_views() {
   $handler->display->display_options['cache']['type'] = 'none';
   $handler->display->display_options['query']['type'] = 'views_query';
   $handler->display->display_options['exposed_form']['type'] = 'basic';
+  $handler->display->display_options['exposed_form']['options']['submit_button'] = t('Go');
   $handler->display->display_options['pager']['type'] = 'full';
   $handler->display->display_options['pager']['options']['items_per_page'] = $items_per_page;
   $handler->display->display_options['style_plugin'] = 'table';
@@ -2165,7 +2248,6 @@ function elobbyist_views_default_views() {
     'bounce' => 'bounce',
     'stype' => 'stype',
     'edit_link' => 'edit_link',
-   // 'delete_link' => 'delete_link',
     'provider_name' => 'provider_name',
   );
   $handler->display->display_options['style_options']['default'] = 'name';
@@ -2203,11 +2285,6 @@ function elobbyist_views_default_views() {
       'separator' => '',
       'empty_column' => 0,
     ),
-    /*'delete_link' => array(
-      'align' => '',
-      'separator' => '',
-      'empty_column' => 0,
-    ),*/
     'provider_name' => array(
       'sortable' => 0,
       'default_sort_order' => 'asc',
@@ -2241,21 +2318,22 @@ function elobbyist_views_default_views() {
       'label' => '',
     ),
   );
-  
-  /* Relationship: Elobbyist Contact: Relation: Subscriber Member (elobbyist_contact ↔ elobbyist_group) */
-  $handler->display->display_options['relationships']['relation_elobbyist_subscriber_elobbyist_group']['id'] = 'relation_elobbyist_subscriber_elobbyist_group';
-  $handler->display->display_options['relationships']['relation_elobbyist_subscriber_elobbyist_group']['table'] = 'elobbyist_contact';
-  $handler->display->display_options['relationships']['relation_elobbyist_subscriber_elobbyist_group']['field'] = 'relation_elobbyist_subscriber_elobbyist_group';
-  $handler->display->display_options['relationships']['relation_elobbyist_subscriber_elobbyist_group']['required'] = TRUE;
-  $handler->display->display_options['relationships']['relation_elobbyist_subscriber_elobbyist_group']['entity_deduplication_left'] = 0;
-  $handler->display->display_options['relationships']['relation_elobbyist_subscriber_elobbyist_group']['entity_deduplication_right'] = 0;
+   
   /* Relationship: Elobbyist Contact: Relation: Group Subscribers (elobbyist_contact → relation) */
   $handler->display->display_options['relationships']['relation_base_left_elobbyist_subscriber']['id'] = 'relation_base_left_elobbyist_subscriber';
   $handler->display->display_options['relationships']['relation_base_left_elobbyist_subscriber']['table'] = 'elobbyist_contact';
   $handler->display->display_options['relationships']['relation_base_left_elobbyist_subscriber']['field'] = 'relation_base_left_elobbyist_subscriber';
-  $handler->display->display_options['relationships']['relation_base_left_elobbyist_subscriber']['label'] = 'Group Subscribers Relation';
+  $handler->display->display_options['relationships']['relation_base_left_elobbyist_subscriber']['label'] = 'Contact to Relation';
   $handler->display->display_options['relationships']['relation_base_left_elobbyist_subscriber']['required'] = TRUE;
   $handler->display->display_options['relationships']['relation_base_left_elobbyist_subscriber']['entity_deduplication_left'] = 0;
+  /* Relationship: Relation: Relation: Group Subscribers (relation → elobbyist_group) */
+  $handler->display->display_options['relationships']['relation_base_elobbyist_subscriber_elobbyist_group']['id'] = 'relation_base_elobbyist_subscriber_elobbyist_group';
+  $handler->display->display_options['relationships']['relation_base_elobbyist_subscriber_elobbyist_group']['table'] = 'relation';
+  $handler->display->display_options['relationships']['relation_base_elobbyist_subscriber_elobbyist_group']['field'] = 'relation_base_elobbyist_subscriber_elobbyist_group';
+  $handler->display->display_options['relationships']['relation_base_elobbyist_subscriber_elobbyist_group']['relationship'] = 'relation_base_left_elobbyist_subscriber';
+  $handler->display->display_options['relationships']['relation_base_elobbyist_subscriber_elobbyist_group']['label'] = 'Relation to Group';
+  $handler->display->display_options['relationships']['relation_base_elobbyist_subscriber_elobbyist_group']['required'] = TRUE;
+  $handler->display->display_options['relationships']['relation_base_elobbyist_subscriber_elobbyist_group']['entity_deduplication_right'] = 0;
   
   /* Field: Elobbyist Contact: Contact id */
   $handler->display->display_options['fields']['cid']['id'] = 'cid';
@@ -2285,6 +2363,7 @@ function elobbyist_views_default_views() {
   $handler->display->display_options['fields']['edit_link']['id'] = 'edit_link';
   $handler->display->display_options['fields']['edit_link']['table'] = 'elobbyist_contact';
   $handler->display->display_options['fields']['edit_link']['field'] = 'edit_link';
+  
   /* Field: Relation: Rid */
   $handler->display->display_options['fields']['rid']['id'] = 'rid';
   $handler->display->display_options['fields']['rid']['table'] = 'relation';
@@ -2292,24 +2371,39 @@ function elobbyist_views_default_views() {
   $handler->display->display_options['fields']['rid']['relationship'] = 'relation_base_left_elobbyist_subscriber';
   $handler->display->display_options['fields']['rid']['exclude'] = TRUE;
   
-  /* Filter criterion: Elobbyist Group: Group id */
-  $handler->display->display_options['filters']['grpid']['id'] = 'grpid';
-  $handler->display->display_options['filters']['grpid']['table'] = 'elobbyist_group';
-  $handler->display->display_options['filters']['grpid']['field'] = 'grpid';
-  $handler->display->display_options['filters']['grpid']['relationship'] = 'relation_elobbyist_subscriber_elobbyist_group';
-  $handler->display->display_options['filters']['grpid']['value']['value'] = 0;
-  $handler->display->display_options['filters']['grpid']['group'] = 1;
-  $handler->display->display_options['filters']['grpid']['expose']['operator_id'] = 'grpid_op';
-  $handler->display->display_options['filters']['grpid']['expose']['label'] = t('Group id');
-  $handler->display->display_options['filters']['grpid']['expose']['operator'] = 'grpid_op';
-  $handler->display->display_options['filters']['grpid']['expose']['identifier'] = 'grpid';
-  
+  /* Contextual filter: Elobbyist Group: Group id */
+  $handler->display->display_options['arguments']['grpid']['id'] = 'grpid';
+  $handler->display->display_options['arguments']['grpid']['table'] = 'elobbyist_group';
+  $handler->display->display_options['arguments']['grpid']['field'] = 'grpid';
+  $handler->display->display_options['arguments']['grpid']['relationship'] = 'relation_base_elobbyist_subscriber_elobbyist_group';
+  $handler->display->display_options['arguments']['grpid']['default_action'] = 'empty';
+  $handler->display->display_options['arguments']['grpid']['default_argument_type'] = 'fixed';
+  $handler->display->display_options['arguments']['grpid']['summary']['number_of_records'] = '0';
+  $handler->display->display_options['arguments']['grpid']['summary']['format'] = 'default_summary';
+  $handler->display->display_options['arguments']['grpid']['summary_options']['items_per_page'] = $items_per_page;
+    
   /* Filter criterion: Elobbyist Contact: Type */
   $handler->display->display_options['filters']['type']['id'] = 'type';
   $handler->display->display_options['filters']['type']['table'] = 'elobbyist_contact';
   $handler->display->display_options['filters']['type']['field'] = 'type';
   $handler->display->display_options['filters']['type']['value'] = 'subscriber';
   $handler->display->display_options['filters']['type']['group'] = 1;
+  
+  /* Filter criterion: Global: Combine fields filter */
+  $handler->display->display_options['filters']['combine']['id'] = 'combine';
+  $handler->display->display_options['filters']['combine']['table'] = 'views';
+  $handler->display->display_options['filters']['combine']['field'] = 'combine';
+  $handler->display->display_options['filters']['combine']['operator'] = 'contains';
+  $handler->display->display_options['filters']['combine']['exposed'] = TRUE;
+  $handler->display->display_options['filters']['combine']['expose']['operator_id'] = 'combine_op';
+  $handler->display->display_options['filters']['combine']['expose']['label'] = t('Search');
+  $handler->display->display_options['filters']['combine']['expose']['operator'] = 'combine_op';
+  $handler->display->display_options['filters']['combine']['expose']['identifier'] = 'name_email';
+  $handler->display->display_options['filters']['combine']['fields'] = array(
+    'name' => 'name',
+    'email' => 'email',
+  );
+  $handler->display->display_options['path'] = 'elobbyist/contact-group/%/members';
   
   $views[$view->name] = $view;
   
@@ -2335,6 +2429,7 @@ function elobbyist_views_default_views() {
   $handler->display->display_options['cache']['type'] = 'none';
   $handler->display->display_options['query']['type'] = 'views_query';
   $handler->display->display_options['exposed_form']['type'] = 'basic';
+  $handler->display->display_options['exposed_form']['options']['submit_button'] = t('Go');
   $handler->display->display_options['pager']['type'] = 'full';
   $handler->display->display_options['pager']['options']['items_per_page'] = $items_per_page;
   $handler->display->display_options['style_plugin'] = 'table';
@@ -2342,7 +2437,6 @@ function elobbyist_views_default_views() {
     'name' => 'name',
     'email' => 'email',
     'edit_link' => 'edit_link',
-   // 'delete_link' => 'delete_link',
   );
   $handler->display->display_options['style_options']['default'] = 'name';
   $handler->display->display_options['style_options']['info'] = array(
@@ -2365,11 +2459,6 @@ function elobbyist_views_default_views() {
       'separator' => '',
       'empty_column' => 0,
     ),
-  /*  'delete_link' => array(
-      'align' => '',
-      'separator' => '',
-      'empty_column' => 0,
-    ),*/
   );
   
   /* Field: Bulk operations */
@@ -2396,14 +2485,23 @@ function elobbyist_views_default_views() {
       'label' => '',
     ),
   );
+   
+  /* Relationship: Elobbyist Contact: Relation: Group Recipients (elobbyist_contact → relation) */
+  $handler->display->display_options['relationships']['relation_base_left_elobbyist_recipient']['id'] = 'relation_base_left_elobbyist_recipient';
+  $handler->display->display_options['relationships']['relation_base_left_elobbyist_recipient']['table'] = 'elobbyist_contact';
+  $handler->display->display_options['relationships']['relation_base_left_elobbyist_recipient']['field'] = 'relation_base_left_elobbyist_recipient';
+  $handler->display->display_options['relationships']['relation_base_left_elobbyist_recipient']['label'] = 'Contact to Relation';
+  $handler->display->display_options['relationships']['relation_base_left_elobbyist_recipient']['required'] = TRUE;
+  $handler->display->display_options['relationships']['relation_base_left_elobbyist_recipient']['entity_deduplication_left'] = 0;
+  /* Relationship: Relation: Relation: Group Recipients (relation → elobbyist_group) */
+  $handler->display->display_options['relationships']['relation_base_elobbyist_recipient_elobbyist_group']['id'] = 'relation_base_elobbyist_recipient_elobbyist_group';
+  $handler->display->display_options['relationships']['relation_base_elobbyist_recipient_elobbyist_group']['table'] = 'relation';
+  $handler->display->display_options['relationships']['relation_base_elobbyist_recipient_elobbyist_group']['field'] = 'relation_base_elobbyist_recipient_elobbyist_group';
+  $handler->display->display_options['relationships']['relation_base_elobbyist_recipient_elobbyist_group']['relationship'] = 'relation_base_left_elobbyist_recipient';
+  $handler->display->display_options['relationships']['relation_base_elobbyist_recipient_elobbyist_group']['label'] = 'Relation to Group';
+  $handler->display->display_options['relationships']['relation_base_elobbyist_recipient_elobbyist_group']['required'] = TRUE;
+  $handler->display->display_options['relationships']['relation_base_elobbyist_recipient_elobbyist_group']['entity_deduplication_right'] = 0;
   
-  /* Relationship: Elobbyist Contact: Relation: Recipient Member (elobbyist_contact ↔ elobbyist_group) */
-  $handler->display->display_options['relationships']['relation_elobbyist_recipient_elobbyist_group']['id'] = 'relation_elobbyist_recipient_elobbyist_group';
-  $handler->display->display_options['relationships']['relation_elobbyist_recipient_elobbyist_group']['table'] = 'elobbyist_contact';
-  $handler->display->display_options['relationships']['relation_elobbyist_recipient_elobbyist_group']['field'] = 'relation_elobbyist_recipient_elobbyist_group';
-  $handler->display->display_options['relationships']['relation_elobbyist_recipient_elobbyist_group']['required'] = TRUE;
-  $handler->display->display_options['relationships']['relation_elobbyist_recipient_elobbyist_group']['entity_deduplication_left'] = 0;
-  $handler->display->display_options['relationships']['relation_elobbyist_recipient_elobbyist_group']['entity_deduplication_right'] = 0;
   /* Field: Elobbyist Contact: Contact id */
   $handler->display->display_options['fields']['cid']['id'] = 'cid';
   $handler->display->display_options['fields']['cid']['table'] = 'elobbyist_contact';
@@ -2422,19 +2520,46 @@ function elobbyist_views_default_views() {
   $handler->display->display_options['fields']['edit_link']['id'] = 'edit_link';
   $handler->display->display_options['fields']['edit_link']['table'] = 'elobbyist_contact';
   $handler->display->display_options['fields']['edit_link']['field'] = 'edit_link';
-  /* Filter criterion: Elobbyist Group: Group id */
-  $handler->display->display_options['filters']['grpid']['id'] = 'grpid';
-  $handler->display->display_options['filters']['grpid']['table'] = 'elobbyist_group';
-  $handler->display->display_options['filters']['grpid']['field'] = 'grpid';
-  $handler->display->display_options['filters']['grpid']['relationship'] = 'relation_elobbyist_recipient_elobbyist_group';
-  $handler->display->display_options['filters']['grpid']['value']['value'] = '0';
-  $handler->display->display_options['filters']['grpid']['group'] = 1;
+  /* Field: Relation: Rid */
+  $handler->display->display_options['fields']['rid']['id'] = 'rid';
+  $handler->display->display_options['fields']['rid']['table'] = 'relation';
+  $handler->display->display_options['fields']['rid']['field'] = 'rid';
+  $handler->display->display_options['fields']['rid']['relationship'] = 'relation_base_left_elobbyist_recipient';
+  $handler->display->display_options['fields']['rid']['exclude'] = TRUE;
+  
+  /* Contextual filter: Elobbyist Group: Group id */
+  $handler->display->display_options['arguments']['grpid']['id'] = 'grpid';
+  $handler->display->display_options['arguments']['grpid']['table'] = 'elobbyist_group';
+  $handler->display->display_options['arguments']['grpid']['field'] = 'grpid';
+  $handler->display->display_options['arguments']['grpid']['relationship'] = 'relation_base_elobbyist_recipient_elobbyist_group';
+  $handler->display->display_options['arguments']['grpid']['default_action'] = 'empty';
+  $handler->display->display_options['arguments']['grpid']['default_argument_type'] = 'fixed';
+  $handler->display->display_options['arguments']['grpid']['summary']['number_of_records'] = '0';
+  $handler->display->display_options['arguments']['grpid']['summary']['format'] = 'default_summary';
+  $handler->display->display_options['arguments']['grpid']['summary_options']['items_per_page'] = $items_per_page;
+  
   /* Filter criterion: Elobbyist Contact: Type */
   $handler->display->display_options['filters']['type']['id'] = 'type';
   $handler->display->display_options['filters']['type']['table'] = 'elobbyist_contact';
   $handler->display->display_options['filters']['type']['field'] = 'type';
   $handler->display->display_options['filters']['type']['value'] = 'recipient';
   $handler->display->display_options['filters']['type']['group'] = 1;
+  
+  /* Filter criterion: Global: Combine fields filter */
+  $handler->display->display_options['filters']['combine']['id'] = 'combine';
+  $handler->display->display_options['filters']['combine']['table'] = 'views';
+  $handler->display->display_options['filters']['combine']['field'] = 'combine';
+  $handler->display->display_options['filters']['combine']['operator'] = 'contains';
+  $handler->display->display_options['filters']['combine']['exposed'] = TRUE;
+  $handler->display->display_options['filters']['combine']['expose']['operator_id'] = 'combine_op';
+  $handler->display->display_options['filters']['combine']['expose']['label'] = t('Search');
+  $handler->display->display_options['filters']['combine']['expose']['operator'] = 'combine_op';
+  $handler->display->display_options['filters']['combine']['expose']['identifier'] = 'name_email';
+  $handler->display->display_options['filters']['combine']['fields'] = array(
+    'name' => 'name',
+    'email' => 'email',
+  );
+  $handler->display->display_options['path'] =  'elobbyist/contact-group/%/members';
  
   $views[$view->name] = $view;
   
@@ -2460,6 +2585,7 @@ function elobbyist_views_default_views() {
   $handler->display->display_options['cache']['type'] = 'none';
   $handler->display->display_options['query']['type'] = 'views_query';
   $handler->display->display_options['exposed_form']['type'] = 'basic';
+  $handler->display->display_options['exposed_form']['options']['submit_button'] = t('Go');
   $handler->display->display_options['pager']['type'] = 'full';
   $handler->display->display_options['pager']['options']['items_per_page'] = $items_per_page;
   $handler->display->display_options['style_plugin'] = 'table';
@@ -2580,6 +2706,7 @@ function elobbyist_views_default_views() {
   $handler->display->display_options['fields']['subject']['id'] = 'subject';
   $handler->display->display_options['fields']['subject']['table'] = 'elobbyist_template';
   $handler->display->display_options['fields']['subject']['field'] = 'subject';
+  $handler->display->display_options['fields']['subject']['relationship'] = 'tid';
   /* Field: Elobbyist Mailing: Name */
   $handler->display->display_options['fields']['mailing_name']['id'] = 'mailing_name';
   $handler->display->display_options['fields']['mailing_name']['table'] = 'elobbyist_mailing';
@@ -2609,11 +2736,34 @@ function elobbyist_views_default_views() {
   $handler->display->display_options['fields']['tid']['table'] = 'elobbyist_activity';
   $handler->display->display_options['fields']['tid']['field'] = 'tid';
   $handler->display->display_options['fields']['tid']['exclude'] = TRUE;
-  /* Filter criterion: Elobbyist Activity: From Contact id */
-  $handler->display->display_options['filters']['fromcid']['id'] = 'fromcid';
-  $handler->display->display_options['filters']['fromcid']['table'] = 'elobbyist_activity';
-  $handler->display->display_options['filters']['fromcid']['field'] = 'fromcid';
-  $handler->display->display_options['filters']['fromcid']['value']['value'] = '0';
+  
+  /* Contextual filter: Elobbyist Group: Group id */
+  $handler->display->display_options['arguments']['fromcid']['id'] = 'fromcid';
+  $handler->display->display_options['arguments']['fromcid']['table'] = 'elobbyist_activity';
+  $handler->display->display_options['arguments']['fromcid']['field'] = 'fromcid';
+  $handler->display->display_options['arguments']['fromcid']['default_action'] = 'empty';
+  $handler->display->display_options['arguments']['fromcid']['default_argument_type'] = 'fixed';
+  $handler->display->display_options['arguments']['fromcid']['summary']['number_of_records'] = '0';
+  $handler->display->display_options['arguments']['fromcid']['summary']['format'] = 'default_summary';
+  $handler->display->display_options['arguments']['fromcid']['summary_options']['items_per_page'] = $items_per_page;
+    
+  /* Filter criterion: Global: Combine fields filter */
+  $handler->display->display_options['filters']['combine']['id'] = 'combine';
+  $handler->display->display_options['filters']['combine']['table'] = 'views';
+  $handler->display->display_options['filters']['combine']['field'] = 'combine';
+  $handler->display->display_options['filters']['combine']['operator'] = 'contains';
+  $handler->display->display_options['filters']['combine']['exposed'] = TRUE;
+  $handler->display->display_options['filters']['combine']['expose']['operator_id'] = 'combine_op';
+  $handler->display->display_options['filters']['combine']['expose']['label'] = t('Search');
+  $handler->display->display_options['filters']['combine']['expose']['operator'] = 'combine_op';
+  $handler->display->display_options['filters']['combine']['expose']['identifier'] = 'act_fields';
+  $handler->display->display_options['filters']['combine']['fields'] = array(
+    'name' => 'name',
+    'email' => 'email',
+    'subject' => 'subject',
+    'mailing_name' => 'mailing_name',
+  );
+  $handler->display->display_options['path'] =  'elobbyist/contact/%/emails';
   
   $views[$view->name] = $view;
   
@@ -2639,6 +2789,7 @@ function elobbyist_views_default_views() {
   $handler->display->display_options['cache']['type'] = 'none';
   $handler->display->display_options['query']['type'] = 'views_query';
   $handler->display->display_options['exposed_form']['type'] = 'basic';
+  $handler->display->display_options['exposed_form']['options']['submit_button'] = t('Go');
   $handler->display->display_options['pager']['type'] = 'full';
   $handler->display->display_options['pager']['options']['items_per_page'] = $items_per_page;
   $handler->display->display_options['style_plugin'] = 'table';
@@ -2759,6 +2910,7 @@ function elobbyist_views_default_views() {
   $handler->display->display_options['fields']['subject']['id'] = 'subject';
   $handler->display->display_options['fields']['subject']['table'] = 'elobbyist_template';
   $handler->display->display_options['fields']['subject']['field'] = 'subject';
+  $handler->display->display_options['fields']['subject']['relationship'] = 'tid';
   /* Field: Elobbyist Mailing: Name */
   $handler->display->display_options['fields']['mailing_name']['id'] = 'mailing_name';
   $handler->display->display_options['fields']['mailing_name']['table'] = 'elobbyist_mailing';
@@ -2788,11 +2940,35 @@ function elobbyist_views_default_views() {
   $handler->display->display_options['fields']['tid']['table'] = 'elobbyist_activity';
   $handler->display->display_options['fields']['tid']['field'] = 'tid';
   $handler->display->display_options['fields']['tid']['exclude'] = TRUE;
-  /* Filter criterion: Elobbyist Activity: To Contact id */
-  $handler->display->display_options['filters']['tocid']['id'] = 'tocid';
-  $handler->display->display_options['filters']['tocid']['table'] = 'elobbyist_activity';
-  $handler->display->display_options['filters']['tocid']['field'] = 'tocid';
-  $handler->display->display_options['filters']['tocid']['value']['value'] = '0';
+  
+  /* Contextual filter: Elobbyist Group: Group id */
+  $handler->display->display_options['arguments']['tocid']['id'] = 'tocid';
+  $handler->display->display_options['arguments']['tocid']['table'] = 'elobbyist_activity';
+  $handler->display->display_options['arguments']['tocid']['field'] = 'tocid';
+  $handler->display->display_options['arguments']['tocid']['default_action'] = 'empty';
+  $handler->display->display_options['arguments']['tocid']['default_argument_type'] = 'fixed';
+  $handler->display->display_options['arguments']['tocid']['summary']['number_of_records'] = '0';
+  $handler->display->display_options['arguments']['tocid']['summary']['format'] = 'default_summary';
+  $handler->display->display_options['arguments']['tocid']['summary_options']['items_per_page'] = $items_per_page;
+
+  
+  /* Filter criterion: Global: Combine fields filter */
+  $handler->display->display_options['filters']['combine']['id'] = 'combine';
+  $handler->display->display_options['filters']['combine']['table'] = 'views';
+  $handler->display->display_options['filters']['combine']['field'] = 'combine';
+  $handler->display->display_options['filters']['combine']['operator'] = 'contains';
+  $handler->display->display_options['filters']['combine']['exposed'] = TRUE;
+  $handler->display->display_options['filters']['combine']['expose']['operator_id'] = 'combine_op';
+  $handler->display->display_options['filters']['combine']['expose']['label'] = t('Search');
+  $handler->display->display_options['filters']['combine']['expose']['operator'] = 'combine_op';
+  $handler->display->display_options['filters']['combine']['expose']['identifier'] = 'act_fields';
+  $handler->display->display_options['filters']['combine']['fields'] = array(
+    'name' => 'name',
+    'email' => 'email',
+    'subject' => 'subject',
+    'mailing_name' => 'mailing_name',
+  );
+  $handler->display->display_options['path'] =  'elobbyist/contact/%/emails';
 
   $views[$view->name] = $view;
   
@@ -2818,6 +2994,7 @@ function elobbyist_views_default_views() {
   $handler->display->display_options['cache']['type'] = 'none';
   $handler->display->display_options['query']['type'] = 'views_query';
   $handler->display->display_options['exposed_form']['type'] = 'basic';
+  $handler->display->display_options['exposed_form']['options']['submit_button'] = t('Go');
   $handler->display->display_options['pager']['type'] = 'full';
   $handler->display->display_options['pager']['options']['items_per_page'] = $items_per_page;
   $handler->display->display_options['style_plugin'] = 'table';
@@ -2971,6 +3148,7 @@ function elobbyist_views_default_views() {
   $handler->display->display_options['fields']['subject']['id'] = 'subject';
   $handler->display->display_options['fields']['subject']['table'] = 'elobbyist_template';
   $handler->display->display_options['fields']['subject']['field'] = 'subject';
+  $handler->display->display_options['fields']['subject']['relationship'] = 'tid';
   
   /* Field: Elobbyist Activity: View */
   $handler->display->display_options['fields']['view_link']['id'] = 'view_link';
@@ -2995,12 +3173,36 @@ function elobbyist_views_default_views() {
   $handler->display->display_options['fields']['tid']['table'] = 'elobbyist_activity';
   $handler->display->display_options['fields']['tid']['field'] = 'tid';
   $handler->display->display_options['fields']['tid']['exclude'] = TRUE;
-  /* Filter criterion: Elobbyist Activity: Mailing id */
-  $handler->display->display_options['filters']['mid']['id'] = 'mid';
-  $handler->display->display_options['filters']['mid']['table'] = 'elobbyist_activity';
-  $handler->display->display_options['filters']['mid']['field'] = 'mid';
-  $handler->display->display_options['filters']['mid']['value']['value'] = '0';
   
+  /* Contextual filter: Elobbyist Group: Group id */
+  $handler->display->display_options['arguments']['mid']['id'] = 'mid';
+  $handler->display->display_options['arguments']['mid']['table'] = 'elobbyist_activity';
+  $handler->display->display_options['arguments']['mid']['field'] = 'mid';
+  $handler->display->display_options['arguments']['mid']['default_action'] = 'empty';
+  $handler->display->display_options['arguments']['mid']['default_argument_type'] = 'fixed';
+  $handler->display->display_options['arguments']['mid']['summary']['number_of_records'] = '0';
+  $handler->display->display_options['arguments']['mid']['summary']['format'] = 'default_summary';
+  $handler->display->display_options['arguments']['mid']['summary_options']['items_per_page'] = $items_per_page;
+
+  /* Filter criterion: Global: Combine fields filter */
+  $handler->display->display_options['filters']['combine']['id'] = 'combine';
+  $handler->display->display_options['filters']['combine']['table'] = 'views';
+  $handler->display->display_options['filters']['combine']['field'] = 'combine';
+  $handler->display->display_options['filters']['combine']['operator'] = 'contains';
+  $handler->display->display_options['filters']['combine']['exposed'] = TRUE;
+  $handler->display->display_options['filters']['combine']['expose']['operator_id'] = 'combine_op';
+  $handler->display->display_options['filters']['combine']['expose']['label'] = t('Search');
+  $handler->display->display_options['filters']['combine']['expose']['operator'] = 'combine_op';
+  $handler->display->display_options['filters']['combine']['expose']['identifier'] = 'act_fields';
+  $handler->display->display_options['filters']['combine']['fields'] = array(
+    'name' => 'name',
+    'email' => 'email',
+    'recipient_name' => 'recipient_name',
+    'recipient_email' => 'recipient_email',
+    'subject' => 'subject',
+  );
+  $handler->display->display_options['path'] =  'elobbyist/mailing/%/emails';
+    
   $views[$view->name] = $view;
 
 

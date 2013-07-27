@@ -9,8 +9,9 @@ function elobbyist_default_rules_configuration() {
       "REQUIRES" : [ "elobbyist" ],
       "USES VARIABLES" : { "contacts" : { "label" : "Contacts", "type" : "list\u003Centity\u003E" } },
       "ACTION SET" : [
-        { "elobbyist_rule_remove_contacts_add_var" : { "PROVIDE" : { "grpid" : { "grpid" : "Group ID" } } } },
-        { "elobbyist_rule_remove_contacts" : { "contacts" : [ "contacts" ], "grpid" : [ "grpid" ] } }
+        { "elobbyist_rule_remove_contacts_add_group" : { "PROVIDE" : { "grpid" : { "grpid" : "Group ID" } } } },
+        { "elobbyist_rule_remove_contacts_add_rids" : { "PROVIDE" : { "rids" : { "rids" : "Relation IDs" } } } },
+        { "elobbyist_rule_remove_contacts" : { "contacts" : [ "contacts" ], "grpid" : [ "grpid" ], "rids" : [ "rids" ] } }
       ]
     }
   }';

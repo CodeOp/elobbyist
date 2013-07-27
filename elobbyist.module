@@ -720,6 +720,14 @@ function elobbyist_permission() {
  * Access Callbacks
  */
 
+function elobbyist_mailing_action_page_access_callback($entity, $perm) {
+  if ($entity->schedule != ELOBBYIST_MAILING_SCHEDULE_ON_GOING) {
+    return FALSE;
+  }
+  
+  return user_access($perm);
+}
+
 function elobbyist_contact_access($op, $entity = NULL, $account = NULL) {
   $account = isset($account) ? $account : $GLOBALS['user'];
 
@@ -823,6 +831,20 @@ function elobbyist_activity_access($op, $entity = NULL, $account = NULL) {
 }
 
 /*
+ * Implements hook_form_alter to enable combined searches
+ */
+function elobbyist_form_alter(&$form, &$form_state, $form_id) {
+  if ($form_id=='views_exposed_form') {
+    $path = current_path();
+    if (isset($path) && stripos($path, 'elobbyist/') === 0) {
+      if (isset($form_state['view']->display_handler->options['path'])) {
+        $form['#action'] = $form_state['view']->display_handler->get_url();
+      }
+    }
+  }
+}
+
+/*
  * Implements hook_views_bulk_operations_form_alter to hide\disable pre-hand unauthorized operations
  */
 function elobbyist_views_bulk_operations_form_alter(&$form, &$form_state, &$vbo) {
@@ -832,11 +854,26 @@ function elobbyist_views_bulk_operations_form_alter(&$form, &$form_state, &$vbo)
   }
   
   switch($form_state['step']) {
+    case 'views_bulk_operations_confirm_form':
+      
+      if (isset($form_state['operation']) && isset($form_state['operation']->operationId)
+        && $form_state['operation']->operationId == 'rules_component::elobbyist_remove_contacts_from_group') {
+        
+        $arrKeys = array();
+        
+        //create array of cid->rid
+        foreach($form_state['selection'] as $sel => $cid) {
+          $arrKeys[$cid] = $vbo->view->result[$sel]->relation_elobbyist_contact_rid;
+        }
+        $form['rids'] = array('#type' => 'hidden', '#value' => base64_encode(serialize($arrKeys)));
+      }
+      break;
     case 'views_bulk_operations_config_form':
       //REPLACE text field with select field for Group parameter of elobbyist_add_contacts_to_group action
       if (isset($form_state['operation']) && isset($form_state['operation']->operationId)
         && $form_state['operation']->operationId == 'rules_component::elobbyist_add_contacts_to_group') {
-         switch($vbo->view->name) {
+         
+        switch($vbo->view->name) {
           case 'elobbyist_subscribers':
             $form['parameter']['grpid']['settings']['grpid'] = array(
               '#type' => 'select',
@@ -2301,8 +2338,4 @@ function elobbyist_contact_save($contact) {
 
 function elobbyist_encrypt($str) {
   return base64_encode(encrypt($str, array('base64' => TRUE)));
-}
-
-function elobbyist_decrypt($str) {
-  return decrypt(base64_decode($str), array('base64' => TRUE));
 }

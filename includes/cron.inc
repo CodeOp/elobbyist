@@ -7,7 +7,7 @@
   * See the Run() method
   */
 
-require_once "Mail.php";
+
 
 class ElobbyistCronTask {
   
@@ -19,12 +19,22 @@ class ElobbyistCronTask {
   public function Run() {
     try {
       $Sent = 0;
+      
+      //decide which mail library to require
       $MaxSend = variable_get('elobbyist_max_emails_per_batch', ELOBBYIST_DEFAULT_MAX_EMAILS_PER_BATCH);
+      $MailLib = variable_get('elobbyist_mail_library', ELOBBYIST_DEFAULT_MAIL_LIBRARY);
+            
+      if ($MailLib == ELOBBYIST_MAIL_LIBRARY_PEAR_MAIL) {
+        require_once dirname(__FILE__) . '/Elobbyist_Mail.inc';
+      }
+      else {
+        require_once dirname(__FILE__) . '/Elobbyist_NetSMTP.inc';
+      }
       
       $this->LoadMailings();
       
       foreach($this->Mailings as $mailing) {
-        $mail_obj = new ElobbyistCronTaskMailing($mailing, $MaxSend);
+        $mail_obj = new ElobbyistCronTaskMailing($mailing, $MaxSend, $MailLib);
         $mail_obj->Process($Sent);
         unset($mail_obj);
         if ($Sent >= $MaxSend && $MaxSend > 0)
@@ -81,14 +91,16 @@ class ElobbyistCronTaskMailing {
   
   protected $Sent = 0;
   protected $MaxSend = 0;
+  protected $MailLib = 0;
   
   protected $ProcessFrom = TRUE; //used by NextSender()
   
   protected $Activities = array();
 
-  public function __construct($row, $max_send) {
+  public function __construct($row, $max_send, $mail_lib) {
     $this->Mailing = $row;
     $this->MaxSend = $max_send;
+    $this->MailLib = $mail_lib;
   }
 
    /*
@@ -112,7 +124,7 @@ class ElobbyistCronTaskMailing {
       reset($this->To);
       $Recipient = current($this->To);
       $Body = NULL;
-      $Pass = elobbyist_decrypt($Sender->pass);
+      $Pass = $this->Decrypt($Sender->pass);
       $RecipientEmailList = array();
       $RecipientNameList = array();
       
@@ -150,50 +162,45 @@ class ElobbyistCronTaskMailing {
    */
   protected function ProcessEmail($Sender, $Recipient, &$Body, &$Pass) {   
     //send email
+    $oMailResponse = NULL;
+    $oEmail = NULL;
+    $oMailObj = NULL;
     try
     {
       //load sender email provider
       $eps = entity_load('elobbyist_email_provider', array($Sender->providerid));
       if (!isset($eps) || count($eps) == 0)
         return FALSE;
+      reset($eps);
       $ep = current($eps);
-      
-      $Body = elobbyist_template_to_email_body($this->Mailing->body, $Sender->name,
-              $Recipient->name);
-      
-      // Build the default headers
-      $message = array();
-      $message['headers'] = array(
-        'MIME-Version'              => '1.0',
-        'Content-Type'              => 'text/html; charset=UTF-8; format=flowed; delsp=yes',
-        'Content-Transfer-Encoding' => '8Bit',
-      );
-
-      //subject is in the headers in this mail function, so copy it
-      $message['headers']['Subject'] = elobbyist_template_to_email_subject(
+            
+      $oEmail = new Elobbyist_MailInfo();
+      $oEmail->From = $Sender->email;
+      $oEmail->To = $Recipient->email;
+      $oEmail->Subject = elobbyist_template_to_email_subject(
         $this->Mailing->subject, $Sender->name, $Recipient->name );
-
+      $oEmail->Body = elobbyist_template_to_email_body($this->Mailing->body, $Sender->name,
+              $Recipient->name);
+      $oEmail->Host = $ep->smtphost;
+      $oEmail->Port = $ep->smtpport;
+      $oEmail->Password = $Pass;
       
-      $message['headers']['From'] = $message['headers']['Sender'] = $message['headers']['Return-Path'] = $Sender->email;
-      $message['headers']['To'] = $Recipient->email;
-      
-      $message['body'] = $Body;
-      
-      $smtp = Mail::factory('smtp',
-        array ('host' => $ep->smtphost,
-          'port' => $ep->smtpport,
-          'auth' => true,
-          'username' => $Sender->email,
-          'password' => $Pass));
+      if ($this->MailLib == ELOBBYIST_MAIL_LIBRARY_PEAR_MAIL) {
+        $oMailObj = new Elobbyist_Mail();
+      }
+      else {
+        $oMailObj = new Elobbyist_NetSMTP();
+      }
+      $oMailResponse = $oMailObj->SendMail($oEmail);
 
-      $result = $smtp->send($Recipient->email, $message['headers'], $message['body']);
-
-      if (PEAR::isError($result)) {
-        $this->SetBouncing($result->getCode(), $Sender);
-        $this->LogMailError(NULL, $result, $Sender, $Recipient);
+      if (!$oMailResponse->Success) {
+        if ($oMailResponse->Bounced) {
+          $this->SetBouncing($Sender);
+        }
+        $this->LogMailError(NULL, 'recipient', $oMailResponse, $oEmail);
         return FALSE;
       }
-      else if ($result) {
+      else {
         if ($Sender->bounce != ELOBBYIST_CONTACT_EMAIL_VERIFIED) {
           $Sender->bounce = ELOBBYIST_CONTACT_EMAIL_VERIFIED;
           $Sender = entity_get_controller('elobbyist_contact')->save($Sender);
@@ -202,7 +209,7 @@ class ElobbyistCronTaskMailing {
       }
     }
     catch(Exception $ex) {
-      $this->LogMailError($ex, NULL, $Sender, $Recipient);
+      $this->LogMailError($ex, 'recipient', $oMailResponse, $oEmail);
     }
     
     return FALSE;
@@ -271,31 +278,25 @@ class ElobbyistCronTaskMailing {
     }
   }
   
-  protected function SetBouncing($nCode, $Sender) {
+  protected function SetBouncing($Sender) {
     $bSave = FALSE;
-    switch($nCode) {
-      case PEAR_MAIL_SMTP_ERROR_AUTH:
-      case PEAR_MAIL_SMTP_ERROR_SENDER:
-      case PEAR_MAIL_SMTP_ERROR_CONNECT:
-        $Sender->bounces++;
-        if ($Sender->bounces >= $this->MaxBounces && $this->MaxBounces > 0) {
-          if ($Sender->bounce != ELOBBYIST_CONTACT_EMAIL_BOUNCING_IGNORED) {
-            $Sender->bounce = ELOBBYIST_CONTACT_EMAIL_BOUNCING_IGNORED;
-            $bSave = TRUE;
-          }
-        }
-        elseif ($Sender->bounce != ELOBBYIST_CONTACT_EMAIL_BOUNCING) {
-          $Sender->bounce = ELOBBYIST_CONTACT_EMAIL_BOUNCING;
-          $bSave = TRUE;
-        }
-        elseif ($Sender->bounces < $this->MaxBounces) {
-          $bSave = TRUE; //just save the count
-        }
-        if ($bSave) {
-          $Sender = entity_get_controller('elobbyist_contact')->save($Sender);
-        }
-        break;
-   }
+    $Sender->bounces++;
+    if ($Sender->bounces >= $this->MaxBounces && $this->MaxBounces > 0) {
+      if ($Sender->bounce != ELOBBYIST_CONTACT_EMAIL_BOUNCING_IGNORED) {
+        $Sender->bounce = ELOBBYIST_CONTACT_EMAIL_BOUNCING_IGNORED;
+        $bSave = TRUE;
+      }
+    }
+    elseif ($Sender->bounce != ELOBBYIST_CONTACT_EMAIL_BOUNCING) {
+      $Sender->bounce = ELOBBYIST_CONTACT_EMAIL_BOUNCING;
+      $bSave = TRUE;
+    }
+    elseif ($Sender->bounces < $this->MaxBounces) {
+      $bSave = TRUE; //just save the count
+    }
+    if ($bSave) {
+      $Sender = entity_get_controller('elobbyist_contact')->save($Sender);
+    }   
  }
   
   protected function LoadContacts() {
@@ -310,6 +311,7 @@ class ElobbyistCronTaskMailing {
 
     if (count($this->FromIds) > 0) {
       $this->From = entity_load('elobbyist_contact', $this->FromIds);
+      reset($this->From);
     }
     elseif ($Collected == 0) {
       //exit (skip this mailing) if there are no senders
@@ -318,9 +320,11 @@ class ElobbyistCronTaskMailing {
 
     if ($Collected > 0) {
       $this->CollectedSenders = entity_load('elobbyist_contact', $this->CollectedSendersIds);
+      reset($this->CollectedSenders);
     }
 
     $this->To = entity_load('elobbyist_contact', $this->ToIds);
+    reset($this->To);
 
     //get max bouncing variable value
     $this->MaxBounces = variable_get('elobbyist_max_bounces', ELOBBYIST_DEFAULT_MAX_BOUNCES);
@@ -396,7 +400,7 @@ class ElobbyistCronTaskMailing {
     if (empty($this->NotificationSenderPass)) {
       return;
     }
-    $this->NotificationSenderPass=elobbyist_decrypt($this->NotificationSenderPass);
+    $this->NotificationSenderPass=$this->Decrypt($this->NotificationSenderPass);
     
     $providerid = variable_get('elobbyist_sender_providerid');
     if (empty($providerid)) {
@@ -406,6 +410,7 @@ class ElobbyistCronTaskMailing {
     if (!isset($providers) || count($providers) == 0) {
       return;
     }
+    reset($providers);
     $provider = current($providers);
     $this->NotificationSenderSmtpHost = $provider->smtphost;
     $this->NotificationSenderSmtpPort = $provider->smtpport;
@@ -418,23 +423,17 @@ class ElobbyistCronTaskMailing {
   
   protected function NotifySender($Sender, &$Body, &$RecipientEmailList, &$RecipientNameList) {
     //send notification email
+    $oMailResponse = NULL;
+    $oEmail = NULL;
     try
     {
       global $base_url;
-      // Build the default headers
-      $message = array();
-      $message['headers'] = array(
-        'MIME-Version'              => '1.0',
-        'Content-Type'              => 'text/html; charset=UTF-8; format=flowed; delsp=yes',
-        'Content-Transfer-Encoding' => '8Bit',
-      );
-
-      //subject is in the headers in this mail function, so copy it
-      $message['headers']['Subject'] = $this->NotificationSubject;
-      $message['headers']['From'] = $message['headers']['Sender'] = $message['headers']['Return-Path'] = $this->NotificationSenderEmail;
-      $message['headers']['To'] = $Sender->email;
       
-      $message['body'] = str_replace(
+      $oEmail = new Elobbyist_MailInfo();
+      $oEmail->From = $this->NotificationSenderEmail;
+      $oEmail->To = $Sender->email;
+      $oEmail->Subject = $this->NotificationSubject;
+      $oEmail->Body = str_replace(
         array(
           '[elobbyist:recipients emails]',
           '[elobbyist:recipients]',
@@ -459,30 +458,46 @@ class ElobbyistCronTaskMailing {
         ),
         elobbyist_get_notify_body()
       );
+      $oEmail->Host = $this->NotificationSenderSmtpHost;
+      $oEmail->Port = $this->NotificationSenderSmtpPort;
+      $oEmail->Password = $this->NotificationSenderPass;
       
-      $smtp = Mail::factory('smtp',
-        array ('host' => $this->NotificationSenderSmtpHost,
-          'port' => $this->NotificationSenderSmtpPort,
-          'auth' => true,
-          'username' => $this->NotificationSenderEmail,
-          'password' => $this->NotificationSenderPass));
+      $oMailObj = new Elobbyist_Mail();
+      $oMailResponse = $oMailObj->SendMail($oEmail);
 
-      $smtp->send($Sender->email, $message['headers'], $message['body']);
+      if (!$oMailResponse->Success) {
+        $this->LogMailError(NULL, 'subscriber', $oMailResponse, $oEmail);
+      }
     }
     catch(Exception $ex) {
-      watchdog('elobbyist cron', $ex->getMessage() . ' Trace: ' . $ex->getTraceAsString(), array(), WATCHDOG_ERROR);
+      $this->LogMailError($ex, 'subscriber', $oMailResponse, $oEmail);
     }
   }
 
 
-  protected function LogMailError($e, $result, $Sender, $Recipient) {
-    $str = 'Sender:' . $Sender->email . ' Recipient: ' . $Recipient->email . ' ';
+  protected function LogMailError($e, $address, $oMailResponse, $oEmail) {
+    $str = "Address: $address\n";
+    
+    if (isset($oEmail)) {
+      if (isset($oEmail->From)) {
+        $str = " \nSender:" . $oEmail->From;
+      }
+      if (isset($oEmail->To)) {
+        $str = " \nRecipient: " . $oEmail->To;
+      }
+    }
     if (isset($e)) {
-      $str .= $ex->getMessage() . ' Trace: ' . $ex->getTraceAsString();
+      $str .= " \n" . $ex->getMessage() . " \nTrace: " . $ex->getTraceAsString();
     }
     
-    if (isset($result)) {
-      $str .= ' PEAR message: ' . $result->getMessage();
+    if (isset($oMailResponse)) {
+      if (isset($oMailResponse->ErrorMessage)) {
+        $str .= " \nMail object error message: " . $oMailResponse->ErrorMessage;
+      }
+
+      if (isset($oMailResponse->ErrorCode)) {
+        $str .= " \nMail object error code: " . $oMailResponse->ErrorCode;
+      }
     }
     
     watchdog('elobbyist cron', $str, array(), WATCHDOG_ERROR);
@@ -529,6 +544,7 @@ class ElobbyistCronTaskMailing {
     if (!isset($groups) || count($groups) == 0) {
       return;
     }
+    reset($groups);
     $group = current($groups);
     if ($group->status == ELOBBYIST_GROUP_STATUS_INACTIVE) {
       return;
@@ -602,6 +618,10 @@ class ElobbyistCronTaskMailing {
         unset($grparr[$grpid]);
       }
     }
+  }
+  
+  protected function Decrypt($str) {
+    return decrypt(base64_decode($str), array('base64' => TRUE));
   }
 }
 

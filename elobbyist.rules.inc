@@ -5,12 +5,22 @@
  */
 function elobbyist_rules_action_info() {
   return array(
-    'elobbyist_rule_remove_contacts_add_var' => array(
+    'elobbyist_rule_remove_contacts_add_group' => array(
       'label' => t('Add group variable from url'),
       'provides' => array(
         'grpid' => array(
           'type' => 'integer',
           'label' => t('Group ID'),
+        ),
+      ),
+      'group' => t('Email Lobbyist'),
+    ),
+    'elobbyist_rule_remove_contacts_add_rids' => array(
+      'label' => t('Add Relation ids from post values'),
+      'provides' => array(
+        'rids' => array(
+          'type' => 'list<integer>',
+          'label' => t('Relation IDs'),
         ),
       ),
       'group' => t('Email Lobbyist'),
@@ -21,6 +31,7 @@ function elobbyist_rules_action_info() {
         //must have first parameter as entity, to integrate with VBO
         'contacts' => array('type' => 'list<entity>', 'label' => t('Contacts')),
         'grpid' => array('type' => 'integer', 'label' => t('Group ID')),
+        'rids' => array('type' => 'list<integer>', 'label' => t('Relation IDs')),
       ),
       'group' => t('Email Lobbyist'),
       'access callback' => 'elobbyist_rule_remove_contacts_access',
@@ -38,25 +49,27 @@ function elobbyist_rules_action_info() {
   );
 }
 
-function elobbyist_rule_remove_contacts_add_var($args, $element) {
+function elobbyist_rule_remove_contacts_add_group($args, $element) {
   //return the group id for group member paths
   return array('grpid' => arg(2));
+}
+
+function elobbyist_rule_remove_contacts_add_rids($args, $element) {
+  global $_POST;
+  if (isset($_POST['rids'])) {
+    return array('rids' => unserialize(base64_decode($_POST['rids'])));
+  }
 }
 
 /*
  * Callback for elobbyist_rule_remove_contact
  * 
  */
-function elobbyist_rule_remove_contacts($contacts, $grpid) {
-  //get relations for contact-group combinatios
-  $query = relation_query('elobbyist_group', $grpid);
-  $query->fieldCondition('endpoints', 'entity_type', 'elobbyist_contact', '=');
-  $query->fieldCondition('endpoints', 'entity_id', array_keys($contacts), 'IN');
-
-  $relations = array_keys($query->execute());
-  
-  foreach($relations as $rid) {
-    relation_delete($rid);
+function elobbyist_rule_remove_contacts($contacts, $grpid, $rids) { 
+  $cids = array_keys($contacts);
+   
+  foreach($cids as $cid) {
+    relation_delete($rids[$cid]);
   }
 }
 
