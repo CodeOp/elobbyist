@@ -5,23 +5,51 @@ package = Email Lobbyist
 php = 5.3
 configure = elobbyist/settings
 
-; internal dependencies
+; ----------
+; Dependencies
+; ----------
+; Email Lobbyist
 dependencies[] = elobbyist_domainname
+; Core
+dependencies[] = block
+dependencies[] = field
+dependencies[] = field_sql_storage
+; Administration
+dependencies[] = actions_permissions
+; Chaos tool suite
+dependencies[] = ctools
 
-; Contrib dependencies
-dependencies[] = entity
+; Clientside Validation
+dependencies[] = clientside_validation
+dependencies[] = clientside_validation_fapi
+dependencies[] = clientside_validation_form
+; Date/Time
+dependencies[] = date
+dependencies[] = date_api
+dependencies[] = date_popup
+; Development
+dependencies[] = fapi_validation
+; Encryption
+dependencies[] = encrypt
+; Field
+dependencies[] = timeperiod
+; Fields
 dependencies[] = entityreference
+; Other
+dependencies[] = entity
+dependencies[] = entity_token
+; Relation
 dependencies[] = relation
 dependencies[] = relation_dummy_field
-dependencies[] = date_popup
-dependencies[] = timeperiod
+dependencies[] = relation_endpoint
+; Rules
+dependencies[] = rules
+; User interface
+dependencies[] = ckeditor
+; Views
 dependencies[] = views
 dependencies[] = views_bulk_operations
 dependencies[] = views_data_export
-dependencies[] = rules
-dependencies[] = encrypt
-dependencies[] = ckeditor
-dependencies[] = clientside_validation_fapi
 
 
 ; Controller Classes
