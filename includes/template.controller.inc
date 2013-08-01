@@ -8,7 +8,7 @@ class ELobbyistTemplateController extends EntityAPIControllerExportable {
       'name' => NULL,
       'subject' => NULL,
       'body' => NULL,
-      'status' => ELOBBYIST_TEMPLATE_STATUS_DRAFT,
+      'status' => ELOBBYIST_TEMPLATE_STATUS_ACTIVE,
     ),$values);
   }
   

@@ -1066,6 +1066,7 @@ function elobbyist_subscriber_types() {
   return array(
     ELOBBYIST_SUBSCRIBER_TYPE_MAILING => t('Specific Mailing'),
     ELOBBYIST_SUBSCRIBER_TYPE_PERSISTENT => t('Persistent'),
+    ELOBBYIST_SUBSCRIBER_TYPE_CANCELLED => t('Cancelled'),
   );
 }
 
@@ -2041,7 +2042,8 @@ function elobbyist_contact_public_form($form, &$form_state, $mailing, $contact) 
     $form['stype'] = array(
       '#type' => 'checkbox',
       '#default_value' => ($contact->stype == ELOBBYIST_SUBSCRIBER_TYPE_PERSISTENT),
-      '#title' => t('Auto-subscribe me to all other actions'),
+      '#title' => t('Subscribe me to other actions'),
+      '#description' => t('You won\'t have to bother to join other letters or campaigns. We will be able to send emails on your behalf - to other recipients as well.'),
       '#weight' => 30,
     );
   }
@@ -2176,7 +2178,10 @@ function elobbyist_contact_public_form_validate($form, &$form_state) {
     $contact->stype = ELOBBYIST_SUBSCRIBER_TYPE_MAILING;
     if (isset($form_state['elobbyist_mailing'])) {
       $mailing = $form_state['elobbyist_mailing'];
-      $contact->mid = $mailing->mid;
+      //add mailing to contact      
+      $contact->elobbyist_subscriber_mailing[LANGUAGE_NONE] = array(
+        0 => array('target_id' => $mailing->mid)
+      );
     }
   }
 
@@ -2219,9 +2224,10 @@ function elobbyist_email_change_callback($form, $form_state) {
  *  
  */
 function elobbyist_contact_merge_by_email(&$contact, &$form, &$form_state) {  
+  
   //load the contact data by email
   $query = db_select('elobbyist_contact', 'c')
-    ->fields('c', array('cid', 'stype', 'pass', 'type','mid','handle', 'bounce', 'bounces', 'form'))
+    ->fields('c', array('cid', 'type', 'pass'))
     ->condition('email', $contact->email);
     
   $query = $query->execute();
@@ -2273,14 +2279,32 @@ function elobbyist_contact_merge_by_email(&$contact, &$form, &$form_state) {
 }
 
 function elobbyist_contact_do_merge(&$contact, &$row) {
+  $dbcontact = current(entity_load('elobbyist_contact', array($row['cid'])));
+  
   //merge the data for save
-  $contact->cid =  $row['cid']; //most importantly add the cid value for a record update, and not a create
-  //make contacts "persistent" once it was selected
-  if ($contact->stype != ELOBBYIST_SUBSCRIBER_TYPE_PERSISTENT) {
-    $contact->stype = $row['stype'];
+  $contact->cid =  $dbcontact->cid; //most importantly add the cid value for a record update, and not a create
+  //merge stype by precdence: persistence, mailing, cancelled
+  if ($contact->stype != ELOBBYIST_SUBSCRIBER_TYPE_PERSISTENT
+    && $dbcontact->stype != ELOBBYIST_SUBSCRIBER_TYPE_CANCELLED) {
+    $contact->stype = $dbcontact->stype;
   }
   //copy fields, so not overriden
-  $contact->mid = $row['mid'];
+  
+  //add the current mailing to the contact's list of mailings
+  
+  $mid = $contact->elobbyist_subscriber_mailing[LANGUAGE_NONE][0]['target_id'];
+  $delta = 1;
+  $dbmids = field_get_items('elobbyist_contact', $dbcontact, 'elobbyist_subscriber_mailing');
+  if ($dbmids) {
+    foreach($dbmids as $dbmid) {
+      if ($dbmid['target_id'] != $mid) {
+        //add mailing if isn't the current one
+        $contact->elobbyist_subscriber_mailing[LANGUAGE_NONE][$delta] = $dbmid;
+        $delta++;
+      }
+    }
+  }
+    
   $contact->handle = $row['handle'];
   $contact->bounce = $row['bounce'];
   $contact->bounces = $row['bounces'];

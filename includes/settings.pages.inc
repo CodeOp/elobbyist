@@ -81,7 +81,7 @@ function elobbyist_settings_form() {
      [elobbyist:subscribe] - link to subscribe to notifications <br/>
      [elobbyist:signup] - link to sign up to all mailings <br/>
      [elobbyist:remove] - link to remove subscription/participation in all mailings <br/>
-     Note: these links will only work if the appropriate permissions were granted to the anonymous user role (by default they are granted).'),
+     Note: These links will only work if the appropriate permissions were granted to the anonymous user role (by default they are granted).'),
     '#required' => TRUE,
   );
 

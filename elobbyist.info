@@ -10,6 +10,7 @@ dependencies[] = elobbyist_domainname
 
 ; Contrib dependencies
 dependencies[] = entity
+dependencies[] = entityreference
 dependencies[] = relation
 dependencies[] = relation_dummy_field
 dependencies[] = date_popup

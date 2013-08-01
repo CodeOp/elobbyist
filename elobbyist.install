@@ -180,6 +180,16 @@ function elobbyist_fields_initialize() {
     'type' => 'elobbyist_domainname',
     'cardinality' => FIELD_CARDINALITY_UNLIMITED,
   );
+  
+  $fields[] = array(
+    'field_name' => 'elobbyist_subscriber_mailing',
+    'type' => 'entityreference',
+    'cardinality' => FIELD_CARDINALITY_UNLIMITED,
+    'entity_types' => array('elobbyist_contact'),
+    'settings' => array(
+      'target_type' => 'elobbyist_mailing',
+    ),
+  );
 
   // Create the fields if they don't exist
   foreach ($fields as $field) {
@@ -269,8 +279,8 @@ function elobbyist_fields_initialize() {
     'cardinality' => FIELD_CARDINALITY_UNLIMITED,
     'entity_type' => 'elobbyist_email_provider',
     'bundle' => 'elobbyist_email_provider',
-    'label' => t('Domain Names'),
-    'description' => t('Associates these domain names with the current email provider, allowing for auto-fill of provider according to email address in subscribers forms.'),
+    'label' => st('Domain Names'),
+    'description' => st('Associates these domain names with the current email provider, allowing for auto-fill of provider according to email address in subscribers forms.'),
     'widget' => array(
         'type' => 'text_textfield',
         'weight' => 50,
@@ -282,6 +292,24 @@ function elobbyist_fields_initialize() {
       ),
      ),
     );
+  
+  $instances[] = array(
+    'field_name' => 'elobbyist_subscriber_mailing',
+    'cardinality' => FIELD_CARDINALITY_UNLIMITED,
+    'entity_type' => 'elobbyist_contact',
+    'bundle' => 'subscriber',
+    'label' => st('Mailings'),
+    'description' => st('The mailing(s) the subscriber is confined to. Ignored for persistent subscribers.'),
+    'widget' => array(
+        'type' => 'options_buttons',
+        'weight' => 50,
+      ),
+    'display' => array(
+      'default' => array(
+         'type' => 'entityreference_entity_view',
+      ),
+    ),
+  );
 
   // Create field instances if they don't exist
   foreach ($instances as $instance) {
@@ -462,7 +490,7 @@ function elobbyist_contact_get_schema() {
         'not null' => FALSE,
       ),
       'stype' => array(
-        'description' => 'for subscriber - subscription type: persistent or specific-mailing subscriber?',
+        'description' => 'for subscriber - subscription type: persistent, specific-mailing, cancelled',
         'type' => 'int',
         'size' => 'tiny',
         'unsigned' => TRUE,
@@ -476,12 +504,6 @@ function elobbyist_contact_get_schema() {
       ),
       'providerid' => array(
         'description' => 'The email provider identifier.',
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => FALSE,
-      ),
-      'mid' => array(
-        'description' => 'Restrict to specific mailing.',
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => FALSE,
@@ -522,10 +544,6 @@ function elobbyist_contact_get_schema() {
         'table' => 'elobbyist_email_provider',
         'columns' => array('providerid' => 'providerid'),
       ),
-      'mailing' => array(
-        'table' => 'elobbyist_mailing',
-        'columns' => array('mid' => 'mid'),
-      ),
     ),
     'unique keys' => array(
       'email' => array('email'),
@@ -537,7 +555,6 @@ function elobbyist_contact_get_schema() {
       'type' => array('type'),
       'name' => array('name'),
       'created' => array('created'),
-      'mid' => array('mid'),
     ),
   );
 }

@@ -1,5 +1,7 @@
 <?php
 
+//using this interface and classes it will be easy to replace/add more mail sending methods
+
 class Elobbyist_MailInfo {
   public $From = NULL;
   public $To = NULL;
@@ -15,10 +17,6 @@ class Elobbyist_MailResponse {
   public $Bounced = FALSE;
   public $ErrorMessage = NULL;
   public $ErrorCode = NULL;
-}
-
-class Elobbyist_BaseMail {
-  
 }
 
 interface Elobbyist_IMail {   

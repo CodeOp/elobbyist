@@ -11,7 +11,7 @@
 function elobbyist_contact_form($form, &$form_state, $contact) {
   // Set the id to identify this as a contact edit form.
   $form['#id'] = 'elobbyist_contact-form';
-  
+    
   drupal_add_css(drupal_get_path('module', 'elobbyist') . 
     '/includes/elobbyist.css', array('type' => 'file'));
     
@@ -127,18 +127,7 @@ function elobbyist_contact_form($form, &$form_state, $contact) {
       '#description' => t('This field is normally not changed manually. The \'Specific Mailing\' option is used in on going schedule mailings to collect per-action contacts. 
         Only persistent subscribers incldued in a mailing \'from\' field are processed.'),
       '#required' => TRUE,
-    );
-    
-    $form['mid'] = array(
-      '#type' => 'select',
-      '#key_type' => 'associative',
-      '#title' => t('Mailing'),
-      '#options' => array('' => '') + elobbyist_mailing_list($contact->mid),
-      '#default_value' => $contact->mid,
-      '#weight' => 34,
-      '#description' => t('The mailing the subscriber is confined to. Ignored for persistent subscribers.'),
-      '#required' => FALSE,
-    );    
+    );  
   }
   
   $relation_type = 'elobbyist_' . $contact->type;
@@ -236,11 +225,7 @@ function elobbyist_contact_form_submit($form, &$form_state) {
   if (isset($form_state['values']['providerid']) && !empty($form_state['values']['providerid'])) {
     $contact->providerid = $form_state['values']['providerid'];
   }
-  
-  if (isset($form_state['values']['mid']) && !empty($form_state['values']['mid'])) {
-    $contact->mid = $form_state['values']['mid'];
-  }
-  
+    
   if (isset($form_state['values']['stype']) && !empty($form_state['values']['stype'])) {
     $contact->stype = $form_state['values']['stype'];
   }
@@ -453,22 +438,6 @@ function elobbyist_contact_page_view($entity, $view_mode = 'full') {
              ),
         '#weight' => -27,
       );
-    }
-    
-    if (!empty($entity->mid)) {
-      $mailings = entity_load('elobbyist_mailing', array($entity->mid));
-      
-      if ($mailings != null && is_array($mailings)) {
-        $entity->content['mid'] = array(
-          '#markup' => theme('elobbyist_field',
-              array(
-                'title' => t('Mailing'),
-                'item' => filter_xss(current($mailings)->name),
-              )
-           ),
-          '#weight' => -45,
-        );
-      }
     }
   }
   
@@ -697,8 +666,7 @@ function elobbyist_contact_remove_confirm_form_submit($form, &$form_state) {
   }
   
   //remove the subscription by setting the subscriber to a specific mailing and unsetting the mailing
-  $contact->stype = ELOBBYIST_SUBSCRIBER_TYPE_MAILING;
-  $contact->mid = '';
+  $contact->stype = ELOBBYIST_SUBSCRIBER_TYPE_CANCELLED;
   if (elobbyist_contact_save($contact)) {
     drupal_set_message(t('Success! Your subscription was removed successfully.'), 'status');
   }
@@ -869,26 +837,6 @@ function elobbyist_contact_page_title($contact) {
   drupal_set_title(t('@type: @title', array(
     '@type' => $types[$contact->type]->name,
     '@title' => $contact->name, )), PASS_THROUGH);
-}
-
-function elobbyist_mailing_list($mid) {
-  $result = db_select('elobbyist_mailing', 'm')
-          ->fields('m', array('mid', 'name'))
-          ->condition('status', ELOBBYIST_MAILING_STATUS_ACTIVE)
-          ->orderBy('m.name', 'ASC')
-          ->execute();
-
-  $result = $result->fetchAllKeyed();
-  if (!empty($mid)) {
-    if (!empty($result) && !isset($result[$mid])) {
-      $mailings = entity_load('elobbyist_mailing', array($mid));
-      if (isset($mailings) && count($mailings) > 0) {
-        $mailing = current($mailings);
-        return array($mailing->mid => $mailing->name) + $result;
-      }
-    }
-  }
-  return $result;
 }
 
 

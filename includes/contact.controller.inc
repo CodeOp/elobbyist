@@ -9,7 +9,6 @@ class ELobbyistContactController extends EntityAPIControllerExportable {
   public function create(array $values = array()) {
     return (object)array_merge(array(
       'cid' => NULL,
-      'mid' => NULL,
       'type' => NULL,
       'name' => NULL,
       'email' => NULL,

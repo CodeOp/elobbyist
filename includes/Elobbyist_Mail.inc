@@ -3,7 +3,7 @@
 require_once "Mail.php";
 require_once dirname(__FILE__) . '/Elobbyist_IMail.inc';
 
-class Elobbyist_Mail extends Elobbyist_BaseMail implements Elobbyist_IMail {
+class Elobbyist_Mail implements Elobbyist_IMail {
   /*
    * Implements mail sending by PEAR Mail
   */

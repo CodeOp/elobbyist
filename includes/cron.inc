@@ -20,21 +20,15 @@ class ElobbyistCronTask {
     try {
       $Sent = 0;
       
-      //decide which mail library to require
       $MaxSend = variable_get('elobbyist_max_emails_per_batch', ELOBBYIST_DEFAULT_MAX_EMAILS_PER_BATCH);
-      $MailLib = variable_get('elobbyist_mail_library', ELOBBYIST_DEFAULT_MAIL_LIBRARY);
             
-      if ($MailLib == ELOBBYIST_MAIL_LIBRARY_PEAR_MAIL) {
-        require_once dirname(__FILE__) . '/Elobbyist_Mail.inc';
-      }
-      else {
-        require_once dirname(__FILE__) . '/Elobbyist_NetSMTP.inc';
-      }
+      //load mail library
+      require_once dirname(__FILE__) . '/Elobbyist_Mail.inc';
       
       $this->LoadMailings();
       
       foreach($this->Mailings as $mailing) {
-        $mail_obj = new ElobbyistCronTaskMailing($mailing, $MaxSend, $MailLib);
+        $mail_obj = new ElobbyistCronTaskMailing($mailing, $MaxSend);
         $mail_obj->Process($Sent);
         unset($mail_obj);
         if ($Sent >= $MaxSend && $MaxSend > 0)
@@ -91,16 +85,14 @@ class ElobbyistCronTaskMailing {
   
   protected $Sent = 0;
   protected $MaxSend = 0;
-  protected $MailLib = 0;
   
   protected $ProcessFrom = TRUE; //used by NextSender()
   
   protected $Activities = array();
 
-  public function __construct($row, $max_send, $mail_lib) {
+  public function __construct($row, $max_send) {
     $this->Mailing = $row;
     $this->MaxSend = $max_send;
-    $this->MailLib = $mail_lib;
   }
 
    /*
@@ -181,16 +173,14 @@ class ElobbyistCronTaskMailing {
         $this->Mailing->subject, $Sender->name, $Recipient->name );
       $oEmail->Body = elobbyist_template_to_email_body($this->Mailing->body, $Sender->name,
               $Recipient->name);
+      //update body for notifications
+      $Body = $oEmail->Body;
       $oEmail->Host = $ep->smtphost;
       $oEmail->Port = $ep->smtpport;
       $oEmail->Password = $Pass;
       
-      if ($this->MailLib == ELOBBYIST_MAIL_LIBRARY_PEAR_MAIL) {
-        $oMailObj = new Elobbyist_Mail();
-      }
-      else {
-        $oMailObj = new Elobbyist_NetSMTP();
-      }
+      $oMailObj = $this->GetMailObject();
+      
       $oMailResponse = $oMailObj->SendMail($oEmail);
 
       if (!$oMailResponse->Success) {
@@ -229,8 +219,7 @@ class ElobbyistCronTaskMailing {
         }
         return $this->NextSender();
       }
-      //If the sender is from the From field and is confined to a mailing - it is skipped
-      if ($Sender->bounce == ELOBBYIST_CONTACT_EMAIL_BOUNCING_IGNORED || $Sender->stype == ELOBBYIST_SUBSCRIBER_TYPE_MAILING) {
+      if ($this->SkipSender($Sender)) {
         return $this->NextSender();
       }
       return $Sender;
@@ -239,9 +228,7 @@ class ElobbyistCronTaskMailing {
       $Sender = next($this->CollectedSenders);
       if (!$Sender)
         return FALSE;
-      //if the sender is from the collector group and is confined to a mailing, but not to this mailing - it is skipped
-      if ($Sender->bounce == ELOBBYIST_CONTACT_EMAIL_BOUNCING_IGNORED || 
-        ($Sender->stype == ELOBBYIST_SUBSCRIBER_TYPE_MAILING && $Sender->mid != $this->Mailing->mid)) {
+      if ($this->SkipSender($Sender)) {
         return $this->NextSender();
       }
       return $Sender;
@@ -258,8 +245,7 @@ class ElobbyistCronTaskMailing {
       
     if ($this->ProcessFrom) {
       $Sender = current($this->From);
-      //If the sender is from the From field and is confined to a mailing - it is skipped
-      if ($Sender->bounce == ELOBBYIST_CONTACT_EMAIL_BOUNCING_IGNORED || $Sender->stype == ELOBBYIST_SUBSCRIBER_TYPE_MAILING) {
+      if ($this->SkipSender($Sender)) {
         return $this->NextSender();
       }
       return $Sender;
@@ -269,9 +255,7 @@ class ElobbyistCronTaskMailing {
         return FALSE;
       }
       $Sender = current($this->CollectedSenders);
-      //if the sender is from the collector group and is confined to a mailing, but not to this mailing - it is skipped
-      if ($Sender->bounce == ELOBBYIST_CONTACT_EMAIL_BOUNCING_IGNORED || 
-          ($Sender->stype == ELOBBYIST_SUBSCRIBER_TYPE_MAILING && $Sender->mid != $this->Mailing->mid)) {
+      if ($this->SkipSender($Sender)) {
         return $this->NextSender();
       }
       return $Sender;
@@ -400,7 +384,7 @@ class ElobbyistCronTaskMailing {
     if (empty($this->NotificationSenderPass)) {
       return;
     }
-    $this->NotificationSenderPass=$this->Decrypt($this->NotificationSenderPass);
+    $this->NotificationSenderPass= $this->Decrypt($this->NotificationSenderPass);
     
     $providerid = variable_get('elobbyist_sender_providerid');
     if (empty($providerid)) {
@@ -463,6 +447,7 @@ class ElobbyistCronTaskMailing {
       $oEmail->Password = $this->NotificationSenderPass;
       
       $oMailObj = new Elobbyist_Mail();
+      $oMailObj = $this->GetMailObject();
       $oMailResponse = $oMailObj->SendMail($oEmail);
 
       if (!$oMailResponse->Success) {
@@ -622,6 +607,35 @@ class ElobbyistCronTaskMailing {
   
   protected function Decrypt($str) {
     return decrypt(base64_decode($str), array('base64' => TRUE));
+  }
+  
+  protected function GetMailObject() {
+    return new Elobbyist_Mail();
+  }
+  
+  protected function SkipSender($Sender) {
+    //if subscriber is cancelled or bouncing, skip it
+    if ($Sender->stype == ELOBBYIST_SUBSCRIBER_TYPE_CANCELLED ||
+           $Sender->bounce == ELOBBYIST_CONTACT_EMAIL_BOUNCING_IGNORED) {
+      return TRUE;
+    }
+    
+    //skip, if the current mailing is not in the subscriber's specific mailings
+    if ($Sender->stype == ELOBBYIST_SUBSCRIBER_TYPE_MAILING) {
+      $Mailings = field_get_items('elobbyist_contact', $Sender, 'elobbyist_subscriber_mailing');
+      if (!$Mailings){ 
+        return TRUE; 
+      }
+      
+      foreach($Mailings as $Mailing) {
+        if ($Mailing['target_id'] == $this->Mailing->mid) {
+          return FALSE; //mailing found, process it (do not skip)
+        }
+      }
+      return TRUE; //mailing not found, so skip it
+    }
+    
+    return FALSE; //do not skip persistent subscribers that are not bouncing
   }
 }
 

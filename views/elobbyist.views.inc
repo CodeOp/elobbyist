@@ -342,30 +342,6 @@ function elobbyist_views_data() {
         'handler' => 'views_handler_sort',
       ),
     ),
-    'mid' => array(
-      'title' => t('Restricted to Mailing id'),
-      'help' => t('Restrict to specific mailing.'),
-      'field' => array(
-        'handler' => 'views_handler_field_numeric',
-        'click sortable' => TRUE,
-      ),
-      'relationship' => array(
-          'title' => t('Restricted to Mailing'),
-          'lable' => t('Restricted to Mailing'),
-          'base' => 'elobbyist_mailing',
-          'base field' => 'mid',
-        ),
-      'argument' => array(
-        'handler' => 'views_handler_argument_many_to_one',
-        'numeric' => TRUE,
-      ),
-      'filter' => array(
-        'handler' => 'elobbyist_views_handler_filter_mailing',
-      ),
-      'sort' => array(
-        'handler' => 'views_handler_sort',
-      ),
-    ),
     'notify' => array(
       'title' => t('Notify'),
       'help' => t('Notify on emails sent.'),
@@ -1145,6 +1121,7 @@ function elobbyist_views_default_views() {
     'email' => 'email',
     'bounce' => 'bounce',
     'stype' => 'stype',
+    'notify' => 'notify',
     'edit_link' => 'edit_link',
     'provider_name' => 'provider_name',
   );
@@ -1186,6 +1163,13 @@ function elobbyist_views_default_views() {
     'provider_name' => array(
       'sortable' => 0,
       'default_sort_order' => 'asc',
+      'align' => '',
+      'separator' => '',
+      'empty_column' => 0,
+    ),
+    'notify' => array(
+      'sortable' => 1,
+      'default_sort_order' => 'desc',
       'align' => '',
       'separator' => '',
       'empty_column' => 0,
@@ -1261,6 +1245,11 @@ function elobbyist_views_default_views() {
   $handler->display->display_options['fields']['stype']['table'] = 'elobbyist_contact';
   $handler->display->display_options['fields']['stype']['field'] = 'stype';
   $handler->display->display_options['fields']['stype']['label'] = t('Subscription');
+  /* Field: Elobbyist Contact: Notify */
+  $handler->display->display_options['fields']['notify']['id'] = 'notify';
+  $handler->display->display_options['fields']['notify']['table'] = 'elobbyist_contact';
+  $handler->display->display_options['fields']['notify']['field'] = 'notify';
+  $handler->display->display_options['fields']['notify']['not'] = 0;
   /* Field: Elobbyist Contact: Edit */
   $handler->display->display_options['fields']['edit_link']['id'] = 'edit_link';
   $handler->display->display_options['fields']['edit_link']['table'] = 'elobbyist_contact';
@@ -2249,6 +2238,7 @@ function elobbyist_views_default_views() {
     'stype' => 'stype',
     'edit_link' => 'edit_link',
     'provider_name' => 'provider_name',
+    'notify' => 'notify',
   );
   $handler->display->display_options['style_options']['default'] = 'name';
   $handler->display->display_options['style_options']['info'] = array(
@@ -2359,6 +2349,11 @@ function elobbyist_views_default_views() {
   $handler->display->display_options['fields']['stype']['table'] = 'elobbyist_contact';
   $handler->display->display_options['fields']['stype']['field'] = 'stype';
   $handler->display->display_options['fields']['stype']['label'] = t('Subscription');
+  /* Field: Elobbyist Contact: Notify */
+  $handler->display->display_options['fields']['notify']['id'] = 'notify';
+  $handler->display->display_options['fields']['notify']['table'] = 'elobbyist_contact';
+  $handler->display->display_options['fields']['notify']['field'] = 'notify';
+  $handler->display->display_options['fields']['notify']['not'] = 0;
   /* Field: Elobbyist Contact: Edit */
   $handler->display->display_options['fields']['edit_link']['id'] = 'edit_link';
   $handler->display->display_options['fields']['edit_link']['table'] = 'elobbyist_contact';

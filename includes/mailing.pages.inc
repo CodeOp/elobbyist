@@ -59,7 +59,7 @@ function elobbyist_mailing_form($form, &$form_state, $entity) {
     '#relation_type' => 'elobbyist_from',
     '#title' => t('From'),
     '#weight' => 6,
-    '#description' => t('Required for a simple run mailing. Optional for an on-going one. Only persistent subscribers will be processed.'),
+    '#description' => t('Required for a simple run mailing. Optional for an on-going one.'),
   );
 
   $form['elobbyist_to'] = array(
@@ -150,6 +150,9 @@ function elobbyist_mailing_form($form, &$form_state, $entity) {
     '#weight' => 14,
     '#required' => FALSE,
     '#exclude_cv' => TRUE,
+    '#attributes' => array(
+      'onchange' => 'JavaScript:OnEndDateChange();'
+      ),
   );
   
   $form['ongoing']['successurl'] = array(
