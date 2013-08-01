@@ -102,12 +102,8 @@ function elobbyist_settings_form() {
     '#default_value' => variable_get('elobbyist_smtp_port_default', ELOBBYIST_DEFAULT_SMTP_PORT),
     '#description' => t('Email Provider form'),
     '#weight' => 0,
-    '#rules' => array(
-      array(
-        'rule' => 'regexp[/^[1-9]\d{0,4}$/]',
-        'error' => t('Enter an up to 5-digit positive number for %field.')
-        ),
-    ),
+    '#rules' => array('numeric'),
+    '#number_type' => 'integer',
   );
 
   $form['defaults']['elobbyist_notify_default_public'] = array(
@@ -143,12 +139,8 @@ function elobbyist_settings_form() {
     '#description' => t('After this number of emails the cron job stops, even if a mailing wasn\'t completely processed. The next cron job run proceeds from the same place the previous one has stopped. Zero means all mailings are always processed in whole.'),
     '#required' => TRUE,
     '#weight' => 3,
-    '#rules' => array(
-      array(
-        'rule' => 'regexp[/^\d{0,7}$/]',
-        'error' => t('Enter an up to 7-digit number for %field.')
-        ),
-    ),
+    '#rules' => array('numeric'),
+    '#number_type' => 'integer',
   );
   
   $form['elobbyist_max_bounces'] = array(
@@ -160,12 +152,8 @@ function elobbyist_settings_form() {
     '#description' => t('After this number of sends an email account will be ignored, unless the contact\'s Email Status is changed manually to \'Unverified\' - in which case the count will be reset. Set to zero to never ignore bouncing email accounts.'),
     '#required' => TRUE,
     '#weight' => 5,
-    '#rules' => array(
-      array(
-        'rule' => 'regexp[/^\d{1,3}$/]',
-        'error' => t('Enter an up to 3-digit number for %field.')
-        ),
-    ),
+    '#rules' => array('numeric'),
+    '#number_type' => 'integer',
   );
   
   $form['elobbyist_records_per_page'] = array(
@@ -190,12 +178,8 @@ function elobbyist_settings_form() {
       Changing this value flushes Drupal\'s cache.'),
     '#required' => TRUE,
     '#weight' => 50,
-    '#rules' => array(
-      array(
-        'rule' => 'regexp[/^-?\d{1,3}$/]',
-        'error' => t('Enter an up to 3-digit number for %field.')
-        ),
-    ),
+    '#rules' => array('numeric'),
+    '#number_type' => 'integer',
   );
 
   $form['buttons'] = array();

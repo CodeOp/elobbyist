@@ -12,8 +12,14 @@ configure = elobbyist/settings
 dependencies[] = elobbyist_domainname
 ; Core
 dependencies[] = block
+dependencies[] = dblog
 dependencies[] = field
 dependencies[] = field_sql_storage
+dependencies[] = list
+dependencies[] = menu
+dependencies[] = number
+dependencies[] = options
+dependencies[] = path
 ; Administration
 dependencies[] = actions_permissions
 ; Chaos tool suite
