@@ -62,6 +62,7 @@ dependencies[] = views_data_export
 features[features_api][] = api:1
 features[filter][] = elobbyist_html
 features[ckeditor_profile][] = elobbyist_profile
+features[user_role][] = elobbyist admin
 
 ; Controller Classes
 files[] = includes/contact.controller.inc
