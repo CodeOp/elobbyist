@@ -57,12 +57,19 @@ function elobbyist_enable() {
     user_role_grant_permissions($role->rid, array('remove subscription by unique handle'));
   }
   elobbyist_settings_restore();
+  elobbyist_enable_text_format();
+  
+  elobbyist_create_user_role();
 }
 
 /**
  * Implements hook_disable()
  */
 function elobbyist_disable() {
+  elobbyist_delete_user_role();
+  
+  elobbyist_disbale_text_format();
+  
   $role = user_role_load_by_name('anonymous user');
   if (isset($role->rid)) {
     user_role_revoke_permissions($role->rid, array('view email lobbyist published pages'));
@@ -761,4 +768,40 @@ function elobbyist_activity_get_schema() {
     ),
     'primary key' => array('aid'),
   );
+}
+
+/*
+ * Creates\Updates full html format for the ckeditor editor
+ */
+function elobbyist_enable_text_format() {
+    $format = new stdClass();
+    $format->format = 'elobbyist_full_html';
+    $format->name = 'Full HTML';
+    filter_format_save($format);
+}
+
+function elobbyist_disbale_text_format() {
+  filter_format_disable('elobbyist_full_html');
+}
+
+/*
+ * Creates an admin user role and assign it all permissions and the full html text format
+ */
+function elobbyist_create_user_role() {
+  $role = new stdClass();
+  $role->name = 'elobbyist admin';
+  if (user_role_save($role)) {
+    $role = user_role_load_by_name('elobbyist admin');
+    user_role_grant_permissions($role->rid, array(
+      array_keys(elobbyist_permission())
+    ));
+    user_role_grant_permissions($role->rid, array(filter_permission_name('elobbyist_full_html')));
+  }
+}
+
+function elobbyist_delete_user_role() {
+  $role = user_role_load_by_name('elobbyist admin');
+  if (isset($role->rid)) {
+    user_role_delete($role->rid);
+  }
 }
