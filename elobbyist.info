@@ -37,6 +37,8 @@ dependencies[] = date_popup
 dependencies[] = fapi_validation
 ; Encryption
 dependencies[] = encrypt
+; Features
+dependencies[] = features
 ; Field
 dependencies[] = timeperiod
 ; Fields
@@ -57,6 +59,9 @@ dependencies[] = views
 dependencies[] = views_bulk_operations
 dependencies[] = views_data_export
 
+features[features_api][] = api:1
+features[filter][] = elobbyist_html
+features[ckeditor_profile][] = Email Lobbyist Profile
 
 ; Controller Classes
 files[] = includes/contact.controller.inc

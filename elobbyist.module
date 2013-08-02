@@ -729,8 +729,8 @@ function elobbyist_role_permisisons_user_default_roles() {
   return $roles;
 }
 
-/**
- * Implements hook_filter_default_formats().
+/*
+ * Implements hook_filter_default_formats
  */
 function elobbyist_filter_default_formats() {
   $formats = array();
