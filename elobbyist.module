@@ -773,8 +773,8 @@ function elobbyist_filter_default_formats() {
  */
 function elobbyist_ckeditor_profile_defaults() {
   $data = array(
-    'Email Lobbyist Profile' => array(
-      'name' => 'Email Lobbyist Profile',
+    'elobbyist_profile' => array(
+      'name' => 'elobbyist_profile',
       'settings' => array(
         'filebrowser' => 'none',
         'quickupload' => 'f',
