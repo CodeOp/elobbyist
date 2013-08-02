@@ -771,20 +771,6 @@ function elobbyist_activity_get_schema() {
 }
 
 /*
- * Creates\Updates full html format for the ckeditor editor
- */
-function elobbyist_enable_text_format() {
-    $format = new stdClass();
-    $format->format = 'elobbyist_full_html';
-    $format->name = 'Full HTML';
-    filter_format_save($format);
-}
-
-function elobbyist_disbale_text_format() {
-  filter_format_disable('elobbyist_full_html');
-}
-
-/*
  * Creates an admin user role and assign it all permissions and the full html text format
  */
 function elobbyist_create_user_role() {
@@ -792,16 +778,15 @@ function elobbyist_create_user_role() {
   $role->name = 'elobbyist admin';
   if (user_role_save($role)) {
     $role = user_role_load_by_name('elobbyist admin');
-    user_role_grant_permissions($role->rid, array(
+    
+    user_role_grant_permissions($role->rid, 
       array_keys(elobbyist_permission())
-    ));
-    user_role_grant_permissions($role->rid, array(filter_permission_name('elobbyist_full_html')));
+    );
+    
+    user_role_grant_permissions($role->rid, array('use text format elobbyist_html'));
   }
 }
 
 function elobbyist_delete_user_role() {
-  $role = user_role_load_by_name('elobbyist admin');
-  if (isset($role->rid)) {
-    user_role_delete($role->rid);
-  }
+  user_role_delete('elobbyist admin');
 }
