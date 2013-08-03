@@ -778,7 +778,7 @@ function elobbyist_setup_user_role() {
     user_role_grant_permissions($role->rid, array_keys(elobbyist_permission()));
     
     user_role_grant_permissions($role->rid, array(
-      'Execute Delete item', //VBO
+      'execute views_bulk_operations_delete_item',
         )
       );
   }
