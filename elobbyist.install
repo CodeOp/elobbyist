@@ -59,6 +59,8 @@ function elobbyist_enable() {
   elobbyist_settings_restore();
   
   elobbyist_setup_user_role();
+  
+  elobbyist_setup_ckeditor();
 }
 
 /**
@@ -778,4 +780,17 @@ function elobbyist_setup_user_role() {
 
     user_role_grant_permissions($role->rid, array('use text format elobbyist_html'));
   }
+}
+
+/*
+ * Select the created format for the ckeditor to load automatically
+ */
+function elobbyist_setup_ckeditor() {
+  db_merge('ckeditor_input_format')
+    ->key(array('name' => 'elobbyist_profile'))
+    ->fields(array(
+      'name' => 'elobbyist_profile',
+      'format' => 'elobbyist_html',
+    ))
+    ->execute();
 }
