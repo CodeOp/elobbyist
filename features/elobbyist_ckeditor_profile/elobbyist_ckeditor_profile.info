@@ -1,0 +1,12 @@
+name = Email Lobbyist CKEditor Profile
+description = CKEditor Profile to enable rich text editing
+core = 7.x
+package = Email Lobbyist
+php = 5.3
+
+dependencies[] = ckeditor
+dependencies[] = features
+dependencies[] = elobbyist_filter
+
+features[features_api][] = api:1
+features[ckeditor_profile][] = elobbyist_profile
