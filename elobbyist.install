@@ -59,8 +59,6 @@ function elobbyist_enable() {
   elobbyist_settings_restore();
   
   elobbyist_setup_user_role();
-  
-  elobbyist_setup_ckeditor();
 }
 
 /**
@@ -767,30 +765,16 @@ function elobbyist_activity_get_schema() {
   );
 }
 
-/*
- * Creates an admin user role and assign it all permissions and the full html text format
- */
 function elobbyist_setup_user_role() {
   $role = user_role_load_by_name('elobbyist admin');
-
-  if ($role) {
-    user_role_grant_permissions($role->rid, 
-      array_keys(elobbyist_permission())
-    );
-
-    user_role_grant_permissions($role->rid, array('use text format elobbyist_html'));
+  if (!$role) {
+      $role = new stdClass();
+      $role->name = 'elobbyist admin';
+      user_role_save($role);
   }
-}
-
-/*
- * Select the created format for the ckeditor to load automatically
- */
-function elobbyist_setup_ckeditor() {
-  db_merge('ckeditor_input_format')
-    ->key(array('name' => 'elobbyist_profile'))
-    ->fields(array(
-      'name' => 'elobbyist_profile',
-      'format' => 'elobbyist_html',
-    ))
-    ->execute();
+  
+  if (isset($role->rid)) {
+    //merge permissions
+    user_role_grant_permissions($role->rid, array_keys(elobbyist_permission()));
+  }
 }

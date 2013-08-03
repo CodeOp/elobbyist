@@ -713,6 +713,9 @@ function elobbyist_permission() {
     'view email lobbyist activities' => array(
       'title' => t('View emails'),
     ),
+    'use text format elobbyist_html' => array(
+      'title' => t('Rich-text editing'),
+    )
   );
 }
 
