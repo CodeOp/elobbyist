@@ -197,6 +197,14 @@ function elobbyist_menu() {
       'weight' => variable_get('elobbyist_main_menu_weight', ELOBBYIST_DEFAULT_MAIN_MENU_WEIGHT),
     );
   
+  $items['elobbyist/cron'] = array(
+    'title' => 'Send emails (cron)',
+    'page callback' => 'elobbyist_cron_page',
+    'access arguments' => array('administer email lobbyist'),
+    'weight' => 300,
+    'type' => MENU_NORMAL_ITEM,
+  );
+  
   $items['elobbyist/settings'] = array(
     'title' => 'Settings',
     'description' => 'Configuration for Email Lobbyist module',
@@ -206,7 +214,7 @@ function elobbyist_menu() {
     'type' => MENU_NORMAL_ITEM,
     'file' => 'includes/settings.pages.inc',
     'expanded' => TRUE,
-    'weight' => 1000,
+    'weight' => 200,
   );
   
   $items['elobbyist/settings/restore'] = array(
@@ -227,7 +235,7 @@ function elobbyist_menu() {
       'access arguments' => array('view email lobbyist email providers'),
    //   'menu_name' => 'management',
       'expanded' => TRUE,
-      'weight' => 100,
+      'weight' => -100,
       'file' => 'includes/email_provider.pages.inc',
     );
   
@@ -284,7 +292,7 @@ function elobbyist_menu() {
     );
   
   $items['elobbyist/subscribers/add/subscriber'] = array(
-      'title' => 'Add new', // subscriber',
+      'title' => 'New subscriber',
       'page callback' => 'elobbyist_contact_add',
       'page arguments' => array(3),
       'access arguments' => array('create email lobbyist contacts'),
@@ -293,7 +301,7 @@ function elobbyist_menu() {
     );
   
   $items['elobbyist/recipients/add/recipient'] = array(
-      'title' => 'Add new', // recipient',
+      'title' => 'New recipient',
       'page callback' => 'elobbyist_contact_add',
       'page arguments' => array(3),
       'access arguments' => array('create email lobbyist contacts'),
@@ -387,7 +395,7 @@ function elobbyist_menu() {
       'access arguments' => array('view email lobbyist contact groups'),
   //    'menu_name' => 'management',
       'expanded' => TRUE,
-      'weight' => 1,
+      'weight' => -1,
       'file' => 'includes/contact_group.pages.inc',
     );
   
@@ -398,7 +406,7 @@ function elobbyist_menu() {
       'access arguments' => array('view email lobbyist contact groups'),
   //    'menu_name' => 'management',
       'expanded' => TRUE,
-      'weight' => 2,
+      'weight' => -1,
       'file' => 'includes/contact_group.pages.inc',
     );
   
@@ -2365,4 +2373,15 @@ function elobbyist_contact_save($contact) {
 
 function elobbyist_encrypt($str) {
   return base64_encode(encrypt($str, array('base64' => TRUE)));
+}
+
+function elobbyist_cron_page() {
+  if (drupal_cron_run()) {
+    drupal_set_message('Cron job completed successfully.');
+  }
+  else {
+    drupal_set_message('Cron job encountered errors.');
+  }
+  
+  return array();
 }

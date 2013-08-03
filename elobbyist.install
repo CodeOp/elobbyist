@@ -776,5 +776,10 @@ function elobbyist_setup_user_role() {
   if (isset($role->rid)) {
     //merge permissions
     user_role_grant_permissions($role->rid, array_keys(elobbyist_permission()));
+    
+    user_role_grant_permissions($role->rid, array(
+      'Execute Delete item', //VBO
+        )
+      );
   }
 }
