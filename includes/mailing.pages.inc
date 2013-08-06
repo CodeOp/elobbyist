@@ -338,7 +338,15 @@ function elobbyist_mailing_form_submit($form, &$form_state) {
     }
     
     if ($new_record) {
-      $form_state['redirect'] = 'elobbyist/mailing/' . $entity->mid . '/edit';
+      if (entity_access('update', 'elobbyist_mailing')) {
+        $form_state['redirect'] = 'elobbyist/mailing/' . $entity->mid . '/edit';
+      }
+      elseif (entity_access('view', 'elobbyist_mailing')) {
+        $form_state['redirect'] = 'elobbyist/mailing/' . $entity->mid . '/view';
+      }
+      else {
+        $form_state['redirect'] = 'elobbyist/mailings/add';
+      }
     }
   }
 }

@@ -93,7 +93,6 @@ class ELobbyistMailingController extends EntityAPIControllerExportable {
         module_invoke_all('entity_delete', $entity, 'elobbyist_mailing');
       }
       
-      elobbyist_foreign_key_cascade_unset('elobbyist_contact', 'mid', $ids);
       elobbyist_foreign_key_cascade_delete('elobbyist_activity', 'mid', 'aid', $ids);
 
       db_ignore_slave();

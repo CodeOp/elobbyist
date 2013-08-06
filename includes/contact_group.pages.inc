@@ -186,7 +186,15 @@ function elobbyist_group_form_submit($form, &$form_state) {
     drupal_set_message(t('@name saved.',array( '@name' => $types[$entity->type]->name)));
     
     if ($new_record) {
-      $form_state['redirect'] = 'elobbyist/contact-group/' . $entity->grpid . '/edit';
+      if (entity_access('update', 'elobbyist_group')) {
+        $form_state['redirect'] = 'elobbyist/contact-group/' . $entity->grpid . '/edit';
+      }
+      elseif (entity_access('view', 'elobbyist_group')) {
+        $form_state['redirect'] = 'elobbyist/contact-group/' . $entity->grpid . '/view';
+      }
+      else {
+        $form_state['redirect'] = "elobbyist/$entity->type/groups/add";
+      }
     }
   }
 }

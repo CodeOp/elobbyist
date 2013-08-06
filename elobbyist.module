@@ -367,7 +367,7 @@ function elobbyist_menu() {
   ); 
   
   $items['elobbyist/contact/%elobbyist_contact/emails'] = array(
-    'title' => 'Emails',
+    'title' => 'Sent Emails',
     'page callback' => 'elobbyist_contact_emails',
     'page arguments' => array(2),
     'access arguments' => array('view email lobbyist activities'),
@@ -761,13 +761,13 @@ function elobbyist_email_provider_access($op, $entity = NULL, $account = NULL) {
 
   switch($op) {
     case 'delete':
-      return user_access('delete email lobbyist providers', $account);
+      return user_access('delete email lobbyist email providers', $account);
     case 'create':
-      return user_access('create email lobbyist providers', $account);
+      return user_access('create email lobbyist email providers', $account);
     case 'update':
-      return user_access('edit email lobbyist providers', $account);
+      return user_access('edit email lobbyist email providers', $account);
     case 'view':
-      return user_access('view email lobbyist providers', $account);
+      return user_access('view email lobbyist email providers', $account);
     default:
       return FALSE;
   }
@@ -975,8 +975,8 @@ function elobbyist_views_bulk_operations_form_alter(&$form, &$form_state, &$vbo)
         }
       }
 
-      $form['select']['export_as_xls'] = array(
-        '#markup'  => '&nbsp;&nbsp;' . l(t('Export as xls'),$vbo->view->override_url . '/download') . '&nbsp;&nbsp;',
+      $form['select']['download'] = array(
+        '#markup'  => '&nbsp;&nbsp;' . l(t('Download'),$vbo->view->override_url . '/download') . '&nbsp;&nbsp;',
         '#weight' => 10,
       );
      break;
@@ -1503,10 +1503,23 @@ function elobbyist_groups_process_element(&$element, $element_type, $entity_type
     }
   
     $grouplinks = array();
+    
+    $sGroupsLink = NULL;
+    if (entity_access('update', 'elobbyist_group')) {
+      $sGroupsLink = '/edit';
+    }
+    elseif (entity_access('view', 'elobbyist_group')) {
+      $sGroupsLink = '/view';
+    }
+    else {
+      $grouplinks = $groups;
+    }      
 
-    //change groups to links
-    foreach($groups as $grpid => $grpname) {
-      $grouplinks[$grpid] = l($grpname, 'elobbyist/contact-group/' . $grpid . '/edit');
+    if ($sGroupsLink != NULL) {
+      //change groups to links
+      foreach($groups as $grpid => $grpname) {
+        $grouplinks[$grpid] = l($grpname, 'elobbyist/contact-group/' . $grpid . $sGroupsLink);
+      }
     }
     
     //show selected inactive groups, otherwise relations will be deleted in submits
@@ -1514,8 +1527,13 @@ function elobbyist_groups_process_element(&$element, $element_type, $entity_type
       $iagroups = entity_load('elobbyist_group', $inactive);
       foreach($iagroups as $grpid => $group) {
         if ($group->status == ELOBBYIST_GROUP_STATUS_INACTIVE) {
-          $grouplinks[$grpid] = l(t('@grpname (Inactive)', array('@grpname' => $group->name)), 
-            'elobbyist/contact-group/' . $grpid . '/edit');
+          if ($sGroupsLink != NULL) {
+            $grouplinks[$grpid] = l(t('@grpname (Inactive)', array('@grpname' => $group->name)), 
+              'elobbyist/contact-group/' . $grpid . $sGroupsLink);
+          }
+          else {
+            $grouplinks[$grpid] = t('@grpname (Inactive)', array('@grpname' => $group->name));
+          }
         }
       }
     }
@@ -1911,15 +1929,14 @@ function elobbyist_get_notify_body() {
     return $body;
   }
   
-  return '<div><p>' . t('The following email was sent successfully on your behalf:') . '<p>' .
+  return '<p>' . t('The following email was sent successfully on your behalf:') . '<p>' .
     '<p>' . t('To: ') . '[elobbyist:recipients]</p>' .
     '<p>[elobbyist:body]</p>' .
     '<p>' . t('@unsubscribe from these notifications', array('@unsubscribe' => '[elobbyist:unsubscribe]')) . '</p>' .
     '<p>' . t('@remove your email account from all future mailings by the site admins'
               , array('@remove' => '[elobbyist:remove]')) . '</p>' .
     '<p>' . t('@signup to all future mailings by the site admins'
-              , array('@signup' => '[elobbyist:signup]')) . '</p>'
-    . '</div>';
+              , array('@signup' => '[elobbyist:signup]')) . '</p>';
 }
 
 function elobbyist_get_notify_subject() {

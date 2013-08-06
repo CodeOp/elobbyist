@@ -41,7 +41,7 @@ function elobbyist_install() {
  */
 function elobbyist_enable() {
   $role = user_role_load_by_name('anonymous user');
-  if (isset($role->rid)) {
+  if (isset($role->rid) && !empty($role->rid)) {
     user_role_grant_permissions($role->rid, array('view email lobbyist published pages'));
     user_role_grant_permissions($role->rid, array('unsubscribe by unique handle'));
     user_role_grant_permissions($role->rid, array('signup by unique handle'));
@@ -49,7 +49,7 @@ function elobbyist_enable() {
     user_role_grant_permissions($role->rid, array('remove subscription by unique handle'));
   }
   $role = user_role_load_by_name('authenticated user');
-  if (isset($role->rid)) {
+  if (isset($role->rid) && !empty($role->rid)) {
     user_role_grant_permissions($role->rid, array('view email lobbyist published pages'));
     user_role_grant_permissions($role->rid, array('unsubscribe by unique handle'));
     user_role_grant_permissions($role->rid, array('signup by unique handle'));
@@ -66,7 +66,7 @@ function elobbyist_enable() {
  */
 function elobbyist_disable() {    
   $role = user_role_load_by_name('anonymous user');
-  if (isset($role->rid)) {
+  if (isset($role->rid) && !empty($role->rid)) {
     user_role_revoke_permissions($role->rid, array('view email lobbyist published pages'));
     user_role_revoke_permissions($role->rid, array('unsubscribe by unique handle'));
     user_role_revoke_permissions($role->rid, array('signup by unique handle'));
@@ -74,7 +74,7 @@ function elobbyist_disable() {
     user_role_revoke_permissions($role->rid, array('remove subscription by unique handle'));
   }
   $role = user_role_load_by_name('authenticated user');
-  if (isset($role->rid)) {
+  if (isset($role->rid) && !empty($role->rid)) {
     user_role_revoke_permissions($role->rid, array('view email lobbyist published pages'));
     user_role_revoke_permissions($role->rid, array('unsubscribe by unique handle'));
     user_role_revoke_permissions($role->rid, array('signup by unique handle'));
@@ -87,6 +87,7 @@ function elobbyist_disable() {
  * Implements hook_uninstall()
  */
 function elobbyist_uninstall() {
+  elobbyist_user_role_dispose();
   elobbyist_fields_dispose();
   elobbyist_relations_dispose();
 }
@@ -773,7 +774,7 @@ function elobbyist_setup_user_role() {
       user_role_save($role);
   }
   
-  if (isset($role->rid)) {
+  if (isset($role->rid) && !empty($role->rid)) {
     //merge permissions
     user_role_grant_permissions($role->rid, array_keys(elobbyist_permission()));
     
@@ -781,5 +782,12 @@ function elobbyist_setup_user_role() {
       'execute views_bulk_operations_delete_item',
         )
       );
+  }
+}
+
+function elobbyist_user_role_dispose() {
+  $role = user_role_load_by_name('elobbyist admin');
+  if (isset($role->rid) && !empty($role->rid)) {
+    user_role_delete($role->rid);
   }
 }

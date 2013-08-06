@@ -18,10 +18,20 @@ class elobbyist_views_handler_linked_name extends views_handler_field {
   function init(&$view, &$options) {
     parent::init($view, $options);
     
-    if (isset($this->definition['readonly url'])) {
-      if (!entity_access('update', $view->base_table)) {
+    if (entity_access('update', $view->base_table)) {
+      return;
+    }
+    elseif (entity_access('view', $view->base_table)) {
+      if (isset($this->definition['readonly url'])) {
         $this->definition['url'] = $this->definition['readonly url'];
       }
+      else
+      {
+        unset($this->definition['url']);
+      }
+    }
+    else {
+      unset($this->definition['url']);
     }
   }
   
@@ -75,7 +85,7 @@ class elobbyist_views_handler_linked_name extends views_handler_field {
       else {
         $fieldval = $this->view->field[$this->view->base_field]->original_value;
       }
-      if (!empty($data) && !empty($fieldval)) {
+      if (!empty($data) && !empty($fieldval) && isset($this->definition['url'])) {
         $this->options['alter']['make_link'] = TRUE;
         $this->options['alter']['path'] = str_replace('%', $fieldval, 
           $this->definition['url']);

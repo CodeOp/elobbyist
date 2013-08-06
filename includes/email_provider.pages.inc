@@ -123,7 +123,12 @@ function elobbyist_email_provider_form_submit($form, &$form_state) {
     drupal_set_message(t('Email provider saved.'));
     
     if ($new_record) {
-      $form_state['redirect'] = 'elobbyist/email-provider/' . $entity->providerid . '/edit';
+      if (entity_access('update', 'elobbyist_email_provider')) {
+        $form_state['redirect'] = 'elobbyist/email-provider/' . $entity->providerid . '/edit';
+      }
+      else {
+        $form_state['redirect'] = 'elobbyist/email-providers/add';      
+      }
     }
   }
 }

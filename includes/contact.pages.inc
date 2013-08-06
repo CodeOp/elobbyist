@@ -265,7 +265,20 @@ function elobbyist_contact_form_submit($form, &$form_state) {
     drupal_set_message(t('@name saved.',array( '@name' => $types[$contact->type]->name)));
     
     if ($new_record) {
-      $form_state['redirect'] = 'elobbyist/contact/' . $contact->cid . '/edit';
+      if (entity_access('update', 'elobbyist_contact')) {
+        $form_state['redirect'] = 'elobbyist/contact/' . $contact->cid . '/edit';
+      }
+      elseif (entity_access('view', 'elobbyist_contact')) {
+        $form_state['redirect'] = 'elobbyist/contact/' . $contact->cid . '/view';
+      }
+      else {
+        if ($contact->type == 'subscriber') {
+          $form_state['redirect'] = 'elobbyist/subscribers/add/subscriber';
+        }
+        else {
+          $form_state['redirect'] = 'elobbyist/recipients/add/recipient';
+        }
+      }
     }
   }
 }
@@ -280,7 +293,6 @@ function elobbyist_contact_redirect_to_add($form, &$form_state) {
     $form_state['redirect'] = 'elobbyist/recipients/add/recipient';
   }
 }
-
 
 /*
  * Delete functions

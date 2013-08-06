@@ -219,8 +219,6 @@ function elobbyist_settings_form() {
   return $form;
 }
 
-
-
 /**
 * Implements validation from the Form API.
 *
@@ -232,6 +230,21 @@ function elobbyist_settings_form() {
 */
 function elobbyist_settings_form_validate($form, &$form_state){
   
+  elobbyist_settings_validate_negative($form_state['values']['elobbyist_max_bounces'],
+    'elobbyist_max_bounces', t('Max Bounces'));
+  elobbyist_settings_validate_negative($form_state['values']['elobbyist_max_emails_per_batch'], 
+    'elobbyist_max_emails_per_batch', t('Max emails per batch'));
+  elobbyist_settings_validate_negative($form_state['values']['defaults']['elobbyist_smtp_port_default'], 
+    'elobbyist_smtp_port_default', t('SMTP port'));
+}
+
+function elobbyist_settings_validate_negative($field, $fieldname, $label) {
+  if (isset($field)) {
+    if (0 + $field < 0) {
+      form_set_error($fieldname, t('@field does not accept negative numbers.',
+        array('@field' => $label)));
+    }
+  }
 }
 
 /**
@@ -358,7 +371,7 @@ function elobbyist_settings_restore_confirm_submit($form, &$form_state) {
   
   drupal_set_message(t('The configuration options have been restored.'));
   
-  $form_state['redirect'] = array('admin/config/administration/elobbyist');
+  $form_state['redirect'] = array('elobbyist/settings');
 }
 
 function elobbyist_config_records_per_page_options() {

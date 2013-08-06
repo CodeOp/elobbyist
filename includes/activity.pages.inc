@@ -31,23 +31,39 @@ function elobbyist_activity_page_view($entity, $view_mode = 'full') {
       '#weight' => -50,
   );
   
+  $sFromItem = NULL;
+  $sToItem = NULL;
+  
+  if (entity_access('update', 'elobbyist_contact')) {
+    $sFromItem = l(filter_xss_admin($from->name), 'elobbyist/contact/' . $entity->fromcid .  '/edit') . ' [' . $from->email . ']';
+    $sToItem = l(filter_xss_admin($to->name), 'elobbyist/contact/' . $entity->tocid .  '/edit') . ' [' . $to->email . ']';
+  }
+  elseif (entity_access('view', 'elobbyist_contact')) {
+    $sFromItem = l(filter_xss_admin($from->name), 'elobbyist/contact/' . $entity->fromcid .  '/view') . ' [' . $from->email . ']';
+    $sToItem = l(filter_xss_admin($to->name), 'elobbyist/contact/' . $entity->tocid .  '/view') . ' [' . $to->email . ']';
+  }
+  else {
+    $sFromItem =filter_xss_admin($from->name) . ' [' . $from->email . ']';
+    $sToItem = filter_xss_admin($to->name) . ' [' . $to->email . ']';
+  }
+  
   $entity->content['from'] = array(
     '#markup' => 
       theme('elobbyist_field',
         array(
           'title' => t('From'),
-          'item' => l(filter_xss_admin($from->name), 'elobbyist/contact/' . $entity->fromcid .  '/edit') . ' [' . $from->email . ']',
+          'item' => $sFromItem,
         )
      ),
     '#weight' => -40,
   );
-  
+
   $entity->content['to'] = array(
     '#markup' => 
       theme('elobbyist_field',
         array(
           'title' => t('To'),
-          'item' => l(filter_xss_admin($to->name), 'elobbyist/contact/' . $entity->tocid .  '/edit') . ' [' . $to->email . ']',
+          'item' => $sToItem,
         )
      ),
     '#weight' => -30,
@@ -66,12 +82,21 @@ function elobbyist_activity_page_view($entity, $view_mode = 'full') {
     '#weight' => -20,
   );
   
-  $entity->content['mailinglink'] = array(
-    '#markup' => 
-        '<p>' . l(t('Mailing'), 'elobbyist/mailing/' . $entity->mid . '/edit') . '</p>'
-     ,
-    '#weight' => -10,
-  );
+  if (entity_access('update', 'elobbyist_mailing')) {
+    $entity->content['mailinglink'] = array(
+      '#markup' => 
+          '<p>' . l(t('Mailing'), 'elobbyist/mailing/' . $entity->mid . '/edit') . '</p>',
+      '#weight' => -10,
+    );
+  }
+  elseif ( entity_access('view', 'elobbyist_mailing') ) {
+    $entity->content['mailinglink'] = array(
+      '#markup' => 
+          '<p>' . l(t('Mailing'), 'elobbyist/mailing/' . $entity->mid . '/view') . '</p>'
+       ,
+      '#weight' => -10,
+    );
+  }
   
   field_attach_prepare_view('elobbyist_activity', 
     array($entity->aid => $entity), $view_mode);

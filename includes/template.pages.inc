@@ -133,8 +133,16 @@ function elobbyist_template_form_submit($form, &$form_state) {
   if ($entity) {
     drupal_set_message(t('Template saved.'));
 
-    if ($new_record) {
-      $form_state['redirect'] = 'elobbyist/template/' . $entity->tid . '/edit';
+    if ($new_record) {      
+      if (entity_access('update', 'elobbyist_template')) {
+        $form_state['redirect'] = 'elobbyist/template/' . $entity->tid . '/edit';
+      }
+      elseif (entity_access('view', 'elobbyist_template')) {
+        $form_state['redirect'] = 'elobbyist/template/' . $entity->tid . '/view';
+      }
+      else {
+        $form_state['redirect'] = 'elobbyist/templates/add';
+      }
     }
   }
 }
