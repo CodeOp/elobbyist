@@ -11,7 +11,6 @@ configure = elobbyist/settings
 ; Email Lobbyist
 dependencies[] = elobbyist_domainname
 dependencies[] = elobbyist_filter
-dependencies[] = elobbyist_ckeditor_profile
 ; Core
 dependencies[] = block
 dependencies[] = dblog
@@ -55,7 +54,7 @@ dependencies[] = relation_endpoint
 ; Rules
 dependencies[] = rules
 ; User interface
-dependencies[] = ckeditor
+dependencies[] = wysiwyg
 ; Views
 dependencies[] = views
 dependencies[] = views_bulk_operations

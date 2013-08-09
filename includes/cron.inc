@@ -411,7 +411,6 @@ class ElobbyistCronTaskMailing {
     $oEmail = NULL;
     try
     {
-      global $base_url;
       
       $oEmail = new Elobbyist_MailInfo();
       $oEmail->From = $this->NotificationSenderEmail;
@@ -431,13 +430,13 @@ class ElobbyistCronTaskMailing {
           join(', ', $RecipientEmailList),
           join(', ', $RecipientNameList),
           $Body,
-          l(t('Unsubscribe'), $base_url . '/elobbyist/contact/unsubscribe/' . $Sender->handle, 
+          l(t('Unsubscribe'), url('elobbyist/contact/unsubscribe/'  . $Sender->handle, array('absolute' => TRUE)), 
             array('attributes' => array('target' => '_blank'))),
-          l(t('Subscribe'), $base_url .  '/elobbyist/contact/subscribe/' . $Sender->handle, 
+          l(t('Subscribe'), url('elobbyist/contact/subscribe/' . $Sender->handle, array('absolute' => TRUE)), 
             array('attributes' => array('target' => '_blank'))),
-          l(t('Sign up'), $base_url . '/elobbyist/contact/signup/' . $Sender->handle, 
+          l(t('Sign up'), url('elobbyist/contact/signup/' . $Sender->handle, array('absolute' => TRUE)), 
             array('attributes' => array('target' => '_blank'))),
-          l(t('Remove'),$base_url . '/elobbyist/contact/remove/' . $Sender->handle, 
+          l(t('Remove'), url('elobbyist/contact/remove/' . $Sender->handle, array('absolute' => TRUE)), 
             array('attributes' => array('target' => '_blank'))),
         ),
         elobbyist_get_notify_body()
